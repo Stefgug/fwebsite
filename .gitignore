@@ -6,3 +6,9 @@ backend/build/
 frontend/.next/
 .DS_Store
 *.log
+
+# Playwright
+frontend/playwright-report/
+frontend/test-results/
+frontend/tests-examples/
+fix-notes/
