@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Bash(yarn --version)",
+      "Bash(pnpm --version)",
+      "Bash(bun --version)",
+      "Bash(npm show *)",
+      "Bash(node -e \"const v=require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\); const arr=JSON.parse\\(v\\); console.log\\(arr.filter\\(x=>x.startsWith\\('5.'\\)\\).slice\\(-5\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(npm install *)",
+      "Bash(npx create-strapi-app@5 backend --no-run --ts --dbclient=better-sqlite3 --dbfile=.tmp/data.db)",
+      "Bash(npx create-strapi-app@5 backend --no-run --ts --dbclient=sqlite)",
+      "Bash(npx create-strapi-app@5 --help)",
+      "Bash(npx create-strapi-app@5 backend --no-run --ts --dbclient=sqlite --dbfile=.tmp/data.db --skip-cloud --no-example --non-interactive --no-git-init)",
+      "Bash(npx create-next-app@15 frontend --typescript --tailwind --eslint --app --no-src-dir --import-alias=\"@/*\" --no-turbopack)",
+      "Bash(HUSKY=0 npm install zustand qs react-hot-toast @strapi/blocks-react-renderer)",
+      "Bash(mkdir -p \"/home/stef/code/Stefgug/Projects/fwebsite/frontend/app/products/[slug]\")",
+      "Bash(mkdir -p \"/home/stef/code/Stefgug/Projects/fwebsite/frontend/app/blog/[slug]\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(echo \"Strapi PID: $!\")",
+      "Bash(tail -50 /tmp/strapi.log)",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"strapi\")",
+      "Bash(lsof -ti:1337)",
+      "Bash(xargs kill -9)",
+      "Bash(awk '{print $2}')",
+      "Bash(echo \"All clear on port 1337: $\\(lsof -ti:1337 || echo 'free'\\)\")",
+      "Bash(python3)"
+    ]
+  }
+}
