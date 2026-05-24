@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { CartIcon } from '@/components/cart/CartIcon';
+import { WishlistIcon } from '@/components/wishlist/WishlistIcon';
 import { cn } from '@/lib/utils';
 
 const navLinks = [
@@ -58,6 +59,7 @@ export function Navbar({ user }: NavbarProps) {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
+            <WishlistIcon />
             <CartIcon />
 
             {user ? (
@@ -75,7 +77,7 @@ export function Navbar({ user }: NavbarProps) {
             ) : (
               <div className="hidden md:flex items-center gap-2">
                 <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-blue-600">
-                  Login
+                  Sign In
                 </Link>
                 <Link
                   href="/register"
@@ -128,8 +130,11 @@ export function Navbar({ user }: NavbarProps) {
               </>
             ) : (
               <>
+                <Link href="/wishlist" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-700 py-1">
+                  Wishlist
+                </Link>
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-700 py-1">
-                  Login
+                  Sign In
                 </Link>
                 <Link href="/register" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-blue-600 py-1">
                   Sign up
