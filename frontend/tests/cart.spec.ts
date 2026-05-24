@@ -63,7 +63,8 @@ test.describe('Checkout', () => {
     });
 
     await page.goto('/cart');
-    const checkout = page.getByRole('link', { name: /checkout/i }).or(page.getByRole('button', { name: /checkout/i }));
+    // Link wraps a button — find by href to avoid strict-mode double-match
+    const checkout = page.locator('a[href="/checkout"]');
     await expect(checkout).toBeVisible({ timeout: 5_000 });
   });
 });
