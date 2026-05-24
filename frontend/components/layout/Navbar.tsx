@@ -77,7 +77,7 @@ export function Navbar({ user }: NavbarProps) {
             ) : (
               <div className="hidden md:flex items-center gap-2">
                 <Link href="/login" className="text-sm font-medium text-gray-700 hover:text-blue-600">
-                  Sign In
+                  Login
                 </Link>
                 <Link
                   href="/register"
@@ -134,7 +134,7 @@ export function Navbar({ user }: NavbarProps) {
                   Wishlist
                 </Link>
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-gray-700 py-1">
-                  Sign In
+                  Login
                 </Link>
                 <Link href="/register" onClick={() => setMobileOpen(false)} className="block text-sm font-medium text-blue-600 py-1">
                   Sign up
