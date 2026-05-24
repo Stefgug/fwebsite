@@ -2,11 +2,10 @@
 """
 Phase 3+4 — AI Test Failure Analysis + Auto-Fix PR
 1. Reads Playwright JSON test results
-2. For each failure: asks Claude to explain the error and propose a fix
+2. For each failure: asks Claude (tool_use) to explain and propose a fix
 3. Creates a Jira comment with the analysis
-4. Applies the proposed code fix on a new git branch and opens a PR
+4. Commits a fix-notes file on a new branch and opens a GitHub PR
 """
-import json
 import os
 import re
 import subprocess
@@ -27,121 +26,132 @@ RESULTS_FILE = os.environ.get("RESULTS_FILE", "frontend/test-results/results.jso
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
+ANALYSIS_TOOL = {
+    "name": "analyze_test_failure",
+    "description": "Analyse un échec de test Playwright et propose une correction.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "analysis": {
+                "type": "string",
+                "description": "Explication claire de pourquoi le test a échoué (2-3 phrases, en français)."
+            },
+            "user_impact": {
+                "type": "string",
+                "description": "Impact côté utilisateur si ce bug existe en production (1 phrase, en français)."
+            },
+            "fix_suggestion": {
+                "type": "string",
+                "description": "Correction proposée: code ou explication technique précise (en français)."
+            },
+            "fix_file": {
+                "type": "string",
+                "description": "Chemin relatif du fichier source à corriger (ex: frontend/app/page.tsx). Vide si incertain."
+            },
+            "fix_code_hint": {
+                "type": "string",
+                "description": "Extrait de code de la correction proposée (peut être vide)."
+            },
+        },
+        "required": ["analysis", "user_impact", "fix_suggestion", "fix_file", "fix_code_hint"],
+    },
+}
 
-def extract_failures(results: dict) -> list[dict]:
-    """Extract failed specs from Playwright JSON report."""
+
+def load_results() -> list[dict]:
+    """Parse Playwright JSON report and return list of failed tests."""
+    import json
+    with open(RESULTS_FILE) as f:
+        data = json.load(f)
+
     failures = []
 
     def walk(suites: list, file_path: str = ""):
         for suite in suites:
-            title = suite.get("title", "")
             fp = suite.get("file", file_path) or file_path
-            nested = suite.get("suites", [])
-            if nested:
-                walk(nested, fp)
+            title = suite.get("title", "")
+            if suite.get("suites"):
+                walk(suite["suites"], fp)
             for spec in suite.get("specs", []):
                 for test in spec.get("tests", []):
                     if test.get("status") in ("failed", "timedOut"):
-                        error_result = next(
-                            (r for r in test.get("results", []) if r.get("status") in ("failed", "timedOut")),
-                            {}
+                        result = next(
+                            (r for r in test.get("results", [])
+                             if r.get("status") in ("failed", "timedOut")), {}
                         )
                         failures.append({
                             "file": fp,
                             "suite": title,
                             "title": spec.get("title", ""),
-                            "error": error_result.get("error", {}).get("message", ""),
-                            "stdout": "\n".join(
-                                m.get("text", "") for m in error_result.get("stdout", [])
-                            ),
+                            "error": result.get("error", {}).get("message", "")[:2000],
                         })
 
-    walk(results.get("suites", []))
+    walk(data.get("suites", []))
     return failures
 
 
-def read_source_file(test_file: str) -> str:
-    """Try to read the test file for context."""
-    # test_file is relative to the project, like 'frontend/tests/home.spec.ts'
-    try:
-        path = test_file if os.path.isabs(test_file) else os.path.join("frontend", test_file)
-        if not os.path.exists(path):
-            path = test_file
-        with open(path) as f:
-            return f.read()[:3000]
-    except Exception:
-        return "(test file not found)"
+def read_file_safe(path: str, max_chars: int = 3000) -> str:
+    for candidate in [path, os.path.join("frontend", path), os.path.join("frontend/tests", path)]:
+        try:
+            with open(candidate) as f:
+                return f.read()[:max_chars]
+        except OSError:
+            continue
+    return "(file not found)"
 
 
-def analyze_failure_with_claude(failure: dict, test_code: str) -> dict:
-    """Ask Claude to explain the failure and propose a fix."""
-    prompt = f"""Tu es un expert en tests Playwright et Next.js. Analyse cet échec de test.
-
-Fichier de test: {failure['file']}
-Suite: {failure['suite']}
-Test: {failure['title']}
-
-Erreur:
-{failure['error'][:2000]}
-
-Code du test:
-```typescript
-{test_code}
-```
-
-Réponds en JSON avec:
-- "analysis": explication claire de pourquoi le test a échoué (2-3 phrases, en français)
-- "user_impact": impact côté utilisateur si ce bug existe en production (1 phrase)
-- "fix_suggestion": correction proposée (code ou explication technique, en français)
-- "fix_file": chemin relatif du fichier à corriger (ex: "frontend/app/page.tsx"), ou null si incertain
-- "fix_code_hint": extrait de code de la correction (optionnel, peut être vide string)
-
-Réponds UNIQUEMENT avec le JSON."""
-
+def analyze_with_claude(failure: dict, test_code: str) -> dict:
+    prompt = (
+        f"Analyse cet échec de test Playwright et propose une correction.\n\n"
+        f"**Fichier :** `{failure['file']}`\n"
+        f"**Suite :** {failure['suite']}\n"
+        f"**Test :** {failure['title']}\n\n"
+        f"**Erreur :**\n```\n{failure['error']}\n```\n\n"
+        f"**Code du test :**\n```typescript\n{test_code}\n```"
+    )
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1500,
+        tools=[ANALYSIS_TOOL],
+        tool_choice={"type": "tool", "name": "analyze_test_failure"},
         messages=[{"role": "user", "content": prompt}],
     )
-    raw = response.content[0].text.strip()
-    raw = re.sub(r'^```(?:json)?\s*', '', raw)
-    raw = re.sub(r'\s*```$', '', raw)
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        return {"analysis": raw, "user_impact": "", "fix_suggestion": "", "fix_file": None, "fix_code_hint": ""}
+    tool_block = next(b for b in response.content if b.type == "tool_use")
+    return tool_block.input
 
 
 def jira_request(method: str, path: str, body: dict | None = None) -> requests.Response:
-    url = f"{JIRA_BASE_URL}/rest/api/3{path}"
-    auth = (JIRA_EMAIL, JIRA_API_TOKEN)
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
-    return requests.request(method, url, json=body, auth=auth, headers=headers, timeout=15)
+    return requests.request(
+        method, f"{JIRA_BASE_URL}/rest/api/3{path}", json=body,
+        auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+        headers={"Content-Type": "application/json", "Accept": "application/json"},
+        timeout=15,
+    )
+
+
+def build_adf(text: str) -> dict:
+    return {"type": "doc", "version": 1,
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": text}]}]}
 
 
 def find_or_create_jira_ticket(failure: dict, analysis: dict) -> str:
-    """Find an existing ticket matching the test name, or create a new one."""
-    # Search for existing ticket
-    jql = f'project = {JIRA_PROJECT_KEY} AND summary ~ "Échec test: {failure["title"][:40]}" ORDER BY created DESC'
-    res = jira_request("GET", f"/search?jql={requests.utils.quote(jql)}&maxResults=1")
+    safe_title = failure["title"][:50].replace('"', "'")
+    jql = f'project = {JIRA_PROJECT_KEY} AND summary ~ "Échec test" AND summary ~ "{safe_title}" ORDER BY created DESC'
+    res = jira_request("GET", f'/search?jql={requests.utils.quote(jql)}&maxResults=1')
     if res.ok:
         issues = res.json().get("issues", [])
         if issues:
             return issues[0]["key"]
 
-    # Create new ticket
-    summary = f"🔴 Échec test: {failure['title'][:70]}"
     body = {
         "fields": {
             "project": {"key": JIRA_PROJECT_KEY},
             "issuetype": {"name": "Tâche"},
-            "summary": summary,
-            "description": {
-                "type": "doc", "version": 1,
-                "content": [{"type": "paragraph", "content": [
-                    {"type": "text", "text": f"Test automatisé en échec sur le commit {COMMIT_SHA[:8]}.\n\n{analysis.get('analysis', '')}"}
-                ]}]
-            }
+            "summary": f"🔴 Échec test: {failure['title'][:70]}",
+            "description": build_adf(
+                f"Test automatisé en échec sur le commit {COMMIT_SHA[:8]}.\n\n"
+                f"{analysis.get('analysis', '')}"
+            ),
         }
     }
     res = jira_request("POST", "/issue", body)
@@ -149,55 +159,52 @@ def find_or_create_jira_ticket(failure: dict, analysis: dict) -> str:
     return res.json()["key"]
 
 
-def add_jira_comment(issue_key: str, failure: dict, analysis: dict, pr_url: str | None) -> None:
+def post_jira_comment(issue_key: str, failure: dict, analysis: dict, pr_url: str | None) -> None:
     lines = [
-        f"🔴 **Échec de test Playwright** — commit `{COMMIT_SHA[:8]}`",
-        f"**Fichier:** `{failure['file']}`",
-        f"**Test:** {failure['title']}",
+        f"🔴 Échec Playwright — commit {COMMIT_SHA[:8]}",
+        f"Fichier: {failure['file']}",
+        f"Test: {failure['title']}",
         "",
-        f"**Analyse IA:** {analysis.get('analysis', '-')}",
-        f"**Impact utilisateur :** {analysis.get('user_impact', '-')}",
+        f"Analyse: {analysis.get('analysis', '-')}",
+        f"Impact utilisateur: {analysis.get('user_impact', '-')}",
         "",
-        f"**Correction suggérée :** {analysis.get('fix_suggestion', '-')}",
+        f"Correction suggérée: {analysis.get('fix_suggestion', '-')}",
     ]
+    if analysis.get("fix_file"):
+        lines.append(f"Fichier à modifier: {analysis['fix_file']}")
     if pr_url:
-        lines += ["", f"🔧 **PR de correction automatique :** {pr_url}"]
+        lines += ["", f"PR de correction automatique: {pr_url}"]
 
-    content_text = "\n".join(lines)
-    body = {
-        "body": {
-            "type": "doc", "version": 1,
-            "content": [{"type": "paragraph", "content": [{"type": "text", "text": content_text}]}]
-        }
-    }
-    res = jira_request("POST", f"/issue/{issue_key}/comment", body)
+    res = jira_request("POST", f"/issue/{issue_key}/comment",
+                       {"body": build_adf("\n".join(lines))})
     if not res.ok:
-        print(f"  ⚠️  Jira comment failed: {res.text[:200]}")
+        print(f"  ⚠️  Jira comment failed ({res.status_code}): {res.text[:200]}")
 
 
 def create_fix_pr(failure: dict, analysis: dict) -> str | None:
-    """Create a git branch with a fix note and open a GitHub PR."""
     if not GH_TOKEN:
-        print("  ℹ️  GH_TOKEN not set — skipping PR creation")
+        print("  ℹ️  GH_TOKEN not set — skipping PR")
         return None
 
-    fix_file = analysis.get("fix_file")
-    fix_code = analysis.get("fix_code_hint", "")
-    branch = f"fix/auto-test-{COMMIT_SHA[:8]}-{re.sub(r'[^a-z0-9]', '-', failure['title'].lower())[:30]}"
+    slug = re.sub(r'[^a-z0-9]+', '-', failure["title"].lower())[:35].strip('-')
+    branch = f"fix/auto-{COMMIT_SHA[:8]}-{slug}"
 
-    # Configure git
     subprocess.run(["git", "config", "user.email", "ci-bot@shopgeneric.dev"], check=False)
     subprocess.run(["git", "config", "user.name", "ShopGeneric CI Bot"], check=False)
-    subprocess.run(["git", "checkout", "-b", branch], check=False)
 
-    # Write a fix notes file so the PR is not empty
-    fix_notes_path = f"fix-notes/{COMMIT_SHA[:8]}.md"
+    result = subprocess.run(["git", "checkout", "-b", branch], capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"  ⚠️  Branch creation failed: {result.stderr[:200]}")
+        return None
+
     os.makedirs("fix-notes", exist_ok=True)
-    fix_note_content = textwrap.dedent(f"""
+    note_path = f"fix-notes/{COMMIT_SHA[:8]}-{slug}.md"
+    fix_code = analysis.get("fix_code_hint", "")
+    note = textwrap.dedent(f"""
         # Auto-fix suggestion — {failure['title']}
 
-        **Failing test:** `{failure['file']}` > `{failure['title']}`
-        **Triggered by commit:** `{COMMIT_SHA[:8]}`
+        **Test en échec :** `{failure['file']}` > `{failure['title']}`
+        **Commit déclencheur :** `{COMMIT_SHA[:8]}`
 
         ## Analyse
 
@@ -211,86 +218,76 @@ def create_fix_pr(failure: dict, analysis: dict) -> str | None:
 
         {analysis.get('fix_suggestion', '')}
 
-        {'### Code suggéré' if fix_code else ''}
-        {'```' + chr(10) + fix_code + chr(10) + '```' if fix_code else ''}
-
-        {'**Fichier à modifier :** `' + fix_file + '`' if fix_file else ''}
+        {('### Code suggéré\n```\n' + fix_code + '\n```') if fix_code else ''}
+        {('**Fichier à modifier :** `' + analysis['fix_file'] + '`') if analysis.get('fix_file') else ''}
 
         ---
         *Généré automatiquement par Claude Sonnet — vérifier avant de merger.*
     """).strip()
 
-    with open(fix_notes_path, "w") as f:
-        f.write(fix_note_content)
+    with open(note_path, "w") as f:
+        f.write(note)
 
-    subprocess.run(["git", "add", fix_notes_path], check=False)
-    subprocess.run(
-        ["git", "commit", "-m", f"fix(auto): test failure analysis for {COMMIT_SHA[:8]}"],
-        check=False
+    subprocess.run(["git", "add", note_path], check=False)
+    cp = subprocess.run(
+        ["git", "commit", "-m", f"fix(auto): analysis for failing test '{failure['title'][:60]}'"],
+        capture_output=True, text=True,
     )
-
-    # Push branch
-    remote = f"https://x-access-token:{GH_TOKEN}@github.com/{GITHUB_REPO}.git"
-    result = subprocess.run(["git", "push", remote, branch], capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"  ⚠️  Push failed: {result.stderr[:300]}")
+    if cp.returncode != 0:
+        print(f"  ⚠️  Commit failed: {cp.stderr[:200]}")
         return None
 
-    # Create PR via GitHub API
-    pr_body = {
-        "title": f"🔧 Auto-fix: {failure['title'][:80]}",
-        "body": fix_note_content,
-        "head": branch,
-        "base": "main",
-    }
-    api_res = requests.post(
+    remote = f"https://x-access-token:{GH_TOKEN}@github.com/{GITHUB_REPO}.git"
+    push = subprocess.run(["git", "push", remote, branch], capture_output=True, text=True)
+    if push.returncode != 0:
+        print(f"  ⚠️  Push failed: {push.stderr[:300]}")
+        return None
+
+    pr_res = requests.post(
         f"https://api.github.com/repos/{GITHUB_REPO}/pulls",
-        json=pr_body,
-        headers={"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"},
+        json={"title": f"🔧 Auto-fix: {failure['title'][:80]}",
+              "body": note, "head": branch, "base": "main"},
+        headers={"Authorization": f"Bearer {GH_TOKEN}",
+                 "Accept": "application/vnd.github+json"},
         timeout=15,
     )
-    if api_res.ok:
-        pr_url = api_res.json().get("html_url", "")
-        print(f"  ✅ PR créée : {pr_url}")
-        return pr_url
-    else:
-        print(f"  ⚠️  PR creation failed: {api_res.text[:300]}")
-        return None
+    if pr_res.ok:
+        url = pr_res.json().get("html_url", "")
+        print(f"  ✅ PR: {url}")
+        return url
+    print(f"  ⚠️  PR failed ({pr_res.status_code}): {pr_res.text[:300]}")
+    return None
 
 
 def main():
     if not os.path.exists(RESULTS_FILE):
-        print(f"✅ No test results file found at {RESULTS_FILE} — no failures to process.")
+        print(f"✅ No results file at {RESULTS_FILE} — all tests passed.")
         sys.exit(0)
 
-    with open(RESULTS_FILE) as f:
-        results = json.load(f)
-
-    failures = extract_failures(results)
+    failures = load_results()
     if not failures:
-        print("✅ All tests passed — nothing to do.")
+        print("✅ All tests passed.")
         sys.exit(0)
 
-    print(f"❌ Found {len(failures)} failing test(s).")
-
+    print(f"❌ {len(failures)} failing test(s).")
     for i, failure in enumerate(failures, 1):
-        print(f"\n[{i}/{len(failures)}] Analyzing: {failure['title']}")
-        test_code = read_source_file(failure["file"])
+        print(f"\n[{i}/{len(failures)}] {failure['title']}")
+        test_code = read_file_safe(failure["file"])
 
-        print("  🤖 Calling Claude...")
-        analysis = analyze_failure_with_claude(failure, test_code)
-        print(f"  📋 Analysis: {analysis.get('analysis', '')[:100]}...")
+        print("  🤖 Analyzing with Claude...")
+        analysis = analyze_with_claude(failure, test_code)
+        print(f"  → {analysis.get('analysis', '')[:100]}")
 
-        print("  🔧 Creating fix PR...")
+        print("  🔧 Creating fix branch + PR...")
         pr_url = create_fix_pr(failure, analysis)
 
         print("  📎 Posting to Jira...")
         try:
-            issue_key = find_or_create_jira_ticket(failure, analysis)
-            add_jira_comment(issue_key, failure, analysis, pr_url)
-            print(f"  ✅ Jira updated: {JIRA_BASE_URL}/browse/{issue_key}")
+            key = find_or_create_jira_ticket(failure, analysis)
+            post_jira_comment(key, failure, analysis, pr_url)
+            print(f"  ✅ {JIRA_BASE_URL}/browse/{key}")
         except Exception as e:
-            print(f"  ⚠️  Jira failed: {e}")
+            print(f"  ⚠️  Jira error: {e}")
 
     print("\n🏁 Done.")
 

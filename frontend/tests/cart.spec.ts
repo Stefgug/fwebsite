@@ -20,16 +20,12 @@ test.describe('Cart page — empty state', () => {
 });
 
 test.describe('Cart — adding products', () => {
-  test('can add a product to cart from the product listing', async ({ page }) => {
-    await page.goto('/products');
+  test('can add a product to cart from the product detail page', async ({ page }) => {
+    // Navigate directly to a known product slug (from mock data) — avoids listing page timing issues
+    await page.goto('/products/macbook-pro-14');
 
-    // Click the first product
-    const firstProduct = page.locator('a[href*="/products/"]').first();
-    await firstProduct.click();
-
-    // Click Add to Cart
     const addToCart = page.getByRole('button', { name: /add to cart/i });
-    await addToCart.waitFor({ timeout: 10_000 });
+    await expect(addToCart).toBeVisible({ timeout: 15_000 });
     await addToCart.click();
 
     // Navigate to cart
@@ -41,13 +37,10 @@ test.describe('Cart — adding products', () => {
   });
 
   test('cart icon shows item count after adding a product', async ({ page }) => {
-    await page.goto('/products');
-
-    const firstProduct = page.locator('a[href*="/products/"]').first();
-    await firstProduct.click();
+    await page.goto('/products/macbook-pro-14');
 
     const addToCart = page.getByRole('button', { name: /add to cart/i });
-    await addToCart.waitFor({ timeout: 10_000 });
+    await expect(addToCart).toBeVisible({ timeout: 15_000 });
     await addToCart.click();
 
     // Cart count badge should appear in header

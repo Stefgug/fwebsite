@@ -94,13 +94,11 @@ const server = http.createServer((req, res) => {
   if (req.method === 'GET' && path === '/api/products') {
     const urlObj = new URL(`http://x${req.url}`);
     const featuredFilter = urlObj.searchParams.get('filters[featured][$eq]');
-    const filtered = featuredFilter === 'true' ? MOCK_PRODUCTS.filter(p => p.featured) : MOCK_PRODUCTS;
+    const slugFilter = urlObj.searchParams.get('filters[slug][$eq]');
+    let filtered = MOCK_PRODUCTS;
+    if (featuredFilter === 'true') filtered = filtered.filter(p => p.featured);
+    if (slugFilter) filtered = filtered.filter(p => p.slug === slugFilter);
     return send(res, 200, paginate(filtered, req.url));
-  }
-
-  // Single product by slug
-  if (req.method === 'GET' && path === '/api/products') {
-    return send(res, 200, paginate(MOCK_PRODUCTS, req.url));
   }
 
   // Categories
