@@ -32,7 +32,7 @@ jobs:
       - name: Run Playwright tests
         id: playwright
         continue-on-error: true   # let subsequent steps run; we fail explicitly at the end
-        run: cd frontend && npx playwright test --reporter=json,html
+        run: cd frontend && npx playwright test
         env:
           NEXT_PUBLIC_STRAPI_URL: http://localhost:1999
           CI: true

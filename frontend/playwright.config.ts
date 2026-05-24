@@ -31,12 +31,13 @@ export default defineConfig({
       env: { MOCK_STRAPI_PORT: '1999' },
     },
     {
-      command: 'npm run dev',
+      // In CI: pre-compile all routes (eliminates lazy-compile race conditions)
+      // Locally: dev mode for fast iteration
+      command: isCI ? 'npm run build && npm start' : 'npm run dev',
       port: 3000,
-      timeout: 60_000,
+      timeout: isCI ? 180_000 : 60_000,
       reuseExistingServer: !isCI,
       env: {
-        // Point Next.js at the mock instead of real Strapi
         NEXT_PUBLIC_STRAPI_URL: 'http://localhost:1999',
         STRAPI_API_TOKEN: 'mock-token',
       },
