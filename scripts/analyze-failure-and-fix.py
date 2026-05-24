@@ -74,9 +74,11 @@ def load_results() -> list[dict]:
                 walk(suite["suites"], fp)
             for spec in suite.get("specs", []):
                 for test in spec.get("tests", []):
-                    if test.get("status") in ("failed", "timedOut"):
+                    # Playwright test-level status: "unexpected" means failed
+                    if test.get("status") == "unexpected":
+                        # Use last failed result (after retries) for most accurate error
                         result = next(
-                            (r for r in test.get("results", [])
+                            (r for r in reversed(test.get("results", []))
                              if r.get("status") in ("failed", "timedOut")), {}
                         )
                         failures.append({

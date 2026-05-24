@@ -34,17 +34,17 @@ test.describe('Navigation', () => {
   });
 
   test('cart icon is visible in the navbar', async ({ page }) => {
-    // Cart icon is present in the header
+    // CartIcon renders an SVG link with no text — locate by href
     const header = page.locator('header');
     await expect(header).toBeVisible();
-    // There should be a link to the cart
-    const cartLink = page.getByRole('link', { name: /cart/i });
+    const cartLink = header.locator('a[href="/cart"]');
     await expect(cartLink).toBeVisible();
   });
 
-  test('sign in link is visible when not logged in', async ({ page }) => {
-    const signInLink = page.getByRole('link', { name: /sign in/i });
-    await expect(signInLink).toBeVisible();
+  test('login link is visible when not logged in', async ({ page }) => {
+    // Navbar shows "Login" (not "Sign In") when user is not authenticated
+    const loginLink = page.getByRole('link', { name: /^Login$/i });
+    await expect(loginLink).toBeVisible();
   });
 
   test('404 page shows not-found message', async ({ page }) => {

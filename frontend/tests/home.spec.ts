@@ -27,13 +27,17 @@ test.describe('Homepage', () => {
   });
 
   test('shows category shortcuts', async ({ page }) => {
-    await expect(page.getByText('Electronics')).toBeVisible();
-    await expect(page.getByText('Clothing')).toBeVisible();
-    await expect(page.getByText('Books')).toBeVisible();
+    // Scope to the "Shop by Category" section to avoid matching product card category labels
+    const categorySection = page.locator('section').filter({ hasText: 'Shop by Category' });
+    await expect(categorySection.getByRole('link', { name: /Electronics/i })).toBeVisible();
+    await expect(categorySection.getByRole('link', { name: /Clothing/i })).toBeVisible();
+    await expect(categorySection.getByRole('link', { name: /Books/i })).toBeVisible();
   });
 
   test('category links navigate to filtered products', async ({ page }) => {
-    await page.getByRole('link', { name: /Electronics/i }).first().click();
+    // Scope to the "Shop by Category" section to avoid clicking product card links
+    const categorySection = page.locator('section').filter({ hasText: 'Shop by Category' });
+    await categorySection.getByRole('link', { name: /Electronics/i }).click();
     await expect(page).toHaveURL(/\/products\?category=electronics/);
   });
 

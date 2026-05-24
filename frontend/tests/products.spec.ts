@@ -6,8 +6,8 @@ test.describe('Products page', () => {
   });
 
   test('displays the products listing', async ({ page }) => {
-    // Wait for products to load (server-side rendered)
-    await expect(page.getByText('All Products')).toBeVisible();
+    // Use heading role to avoid matching the sidebar "All Products (3)" link too
+    await expect(page.getByRole('heading', { name: 'All Products' })).toBeVisible();
   });
 
   test('shows category sidebar', async ({ page }) => {

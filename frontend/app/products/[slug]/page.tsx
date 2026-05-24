@@ -5,6 +5,7 @@ import { getStrapiImageUrl } from '@/lib/strapi';
 import { formatPrice } from '@/lib/utils';
 import { AddToCartButton } from '@/components/products/AddToCartButton';
 import { Badge } from '@/components/ui/Badge';
+import { RichTextRenderer } from '@/components/blog/RichTextRenderer';
 import Link from 'next/link';
 
 interface PageProps {
@@ -125,8 +126,8 @@ export default async function ProductDetailPage({ params }: PageProps) {
           {product.description && (
             <div className="border-t border-gray-200 pt-6">
               <h2 className="font-semibold text-gray-900 mb-3">Description</h2>
-              <div className="text-sm text-gray-600 whitespace-pre-line leading-relaxed">
-                {product.description}
+              <div className="text-sm text-gray-600 leading-relaxed">
+                <RichTextRenderer content={product.description} />
               </div>
             </div>
           )}

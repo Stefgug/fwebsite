@@ -59,7 +59,7 @@ test.describe('Checkout', () => {
         },
         version: 0,
       };
-      localStorage.setItem('cart-store', JSON.stringify(cart));
+      localStorage.setItem('fwebsite-cart', JSON.stringify(cart));
     });
 
     await page.goto('/cart');
