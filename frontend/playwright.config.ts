@@ -4,6 +4,7 @@ const isCI = !!process.env.CI;
 
 export default defineConfig({
   testDir: './tests',
+  testMatch: '**/*.spec.ts',
   timeout: 30_000,
   retries: isCI ? 1 : 0,
   workers: isCI ? 1 : undefined,
