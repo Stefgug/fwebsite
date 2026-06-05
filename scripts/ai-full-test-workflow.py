@@ -31,6 +31,9 @@ COVERAGE_SUMMARY_FILE = Path(
 JIRA_EPIC_KEY = os.environ.get("JIRA_EPIC_KEY", "UNKNOWN-EPIC")
 JIRA_EPIC_TITLE = os.environ.get("JIRA_EPIC_TITLE", "No epic title provided")
 JIRA_EPIC_DESCRIPTION = os.environ.get("JIRA_EPIC_DESCRIPTION", "")
+JIRA_BASE_URL = os.environ.get("JIRA_BASE_URL", "https://stephaneguren.atlassian.net")
+JIRA_EMAIL = os.environ.get("JIRA_EMAIL", "")
+JIRA_API_TOKEN = os.environ.get("JIRA_API_TOKEN", "")
 
 UNIT_OUTCOME = os.environ.get("UNIT_OUTCOME", "unknown")
 E2E_OUTCOME = os.environ.get("E2E_OUTCOME", "unknown")
@@ -57,6 +60,59 @@ def load_json(path: Path) -> dict[str, Any] | None:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return None
+
+
+def extract_epic_key_from_text(text: str) -> str | None:
+    if not text:
+        return None
+    m = re.search(r"\b([A-Z][A-Z0-9]+-\d+)\b", text)
+    return m.group(1) if m else None
+
+
+def hydrate_epic_from_env_or_event() -> None:
+    global JIRA_EPIC_KEY, JIRA_EPIC_TITLE, JIRA_EPIC_DESCRIPTION
+
+    if JIRA_EPIC_KEY and JIRA_EPIC_KEY != "UNKNOWN-EPIC":
+        return
+
+    candidates = [
+        os.environ.get("GIT_EVENT_REF", ""),
+        os.environ.get("GITHUB_REF_NAME", ""),
+        os.environ.get("GITHUB_HEAD_REF", ""),
+        os.environ.get("GITHUB_REF", ""),
+    ]
+
+    for c in candidates:
+        key = extract_epic_key_from_text(c)
+        if key:
+            JIRA_EPIC_KEY = key
+            break
+
+    if not JIRA_EPIC_KEY or JIRA_EPIC_KEY == "UNKNOWN-EPIC":
+        return
+
+    if (
+        JIRA_EMAIL
+        and JIRA_API_TOKEN
+        and (not JIRA_EPIC_TITLE or JIRA_EPIC_TITLE == "No epic title provided")
+    ):
+        try:
+            res = requests.get(
+                f"{JIRA_BASE_URL}/rest/api/3/issue/{JIRA_EPIC_KEY}",
+                auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+                headers={"Accept": "application/json"},
+                timeout=15,
+            )
+            if res.ok:
+                fields = (res.json() or {}).get("fields", {})
+                summary = fields.get("summary")
+                description = fields.get("description")
+                if isinstance(summary, str) and summary.strip():
+                    JIRA_EPIC_TITLE = summary
+                if description:
+                    JIRA_EPIC_DESCRIPTION = json.dumps(description, ensure_ascii=False)[:3000]
+        except Exception:
+            pass
 
 
 def parse_playwright_results(data: dict[str, Any] | None) -> dict[str, Any]:
@@ -424,6 +480,13 @@ def maybe_create_pr(report_path: Path, summary: dict[str, Any]) -> str | None:
 
 
 def main() -> None:
+    hydrate_epic_from_env_or_event()
+
+    event_name = os.environ.get("GIT_EVENT_NAME", os.environ.get("GITHUB_EVENT_NAME", ""))
+    if event_name == "create" and (not JIRA_EPIC_KEY or JIRA_EPIC_KEY == "UNKNOWN-EPIC"):
+        print("No Jira epic key detected from branch create event; skipping report generation.")
+        return
+
     pw = parse_playwright_results(load_json(PLAYWRIGHT_RESULTS_FILE))
     cov = parse_coverage_summary(load_json(COVERAGE_SUMMARY_FILE))
 

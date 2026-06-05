@@ -49,7 +49,18 @@ No extra GitHub token setup is required inside workflow runs (uses built-in `sec
 
 ## Step-by-step: trigger from Jira and visualize full workflow
 
-## A) One-time setup in Jira
+### Option A (recommended): use your **existing Jira↔GitHub connection**
+
+This avoids adding a new Jira PAT for `repository_dispatch`.
+
+1. In Jira, open your Epic and click **Create branch** (via the existing GitHub integration).
+2. Name branch with epic key in the name (example: `SCRUM-123-e2e-hardening`).
+3. The GitHub workflow listens to `create` events and auto-extracts the epic key from branch name.
+4. If `JIRA_EMAIL` + `JIRA_API_TOKEN` secrets are configured in GitHub, the workflow fetches epic summary/description from Jira API automatically.
+
+### Option B: Jira automation via `repository_dispatch`
+
+Use this if you prefer explicit webhook triggering from Jira automation.
 
 1. Go to **Jira Project Settings → Automation**
 2. Click **Create rule**
@@ -66,7 +77,7 @@ Use this request:
 - **URL**: `https://api.github.com/repos/Stefgug/fwebsite/dispatches`
 - **Headers**:
   - `Accept: application/vnd.github+json`
-  - `Authorization: Bearer <YOUR_GITHUB_PAT>`
+  - `Authorization: Bearer <YOUR_...>`
   - `Content-Type: application/json`
 - **Body**:
 
