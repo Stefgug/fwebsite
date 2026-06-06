@@ -18,6 +18,7 @@ JIRA_PROJECT_KEY = os.environ.get("JIRA_PROJECT_KEY", "SCRUM")
 
 GH_TOKEN = os.environ.get("GH_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 GITHUB_REPO = os.environ.get("GITHUB_REPOSITORY", os.environ.get("GITHUB_REPO", "Stefgug/fwebsite"))
+WORKFLOW_REF = os.environ.get("GITHUB_REF_NAME", "main")
 
 HEADERS = {"Accept": "application/json", "Content-Type": "application/json"}
 AUTH = (JIRA_EMAIL, JIRA_API_TOKEN)
@@ -99,7 +100,7 @@ def trigger_test_workflow(epic_key: str, epic_title: str, epic_description: str)
         f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/5-epic-automated-test-workflow.yml/dispatches",
         headers={"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"},
         json={
-            "ref": "main",
+            "ref": WORKFLOW_REF,
             "inputs": {
                 "jira_epic_key": epic_key,
                 "jira_epic_title": epic_title,
