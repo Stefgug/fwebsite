@@ -1,150 +1,68 @@
-# AI Test Workflow PoC (Epic-driven + visual)
+# 🎬 Démo PoC — Mode d'emploi simplifié
 
-This PoC implements a full automated test flow from a Jira epic context, with visual outputs.
+## En 3 clics, tu déclenches tout
 
-## What is implemented
+### 1. Lance le workflow démo
 
-- Unit tests + coverage gate in CI (`>=50%` lines)
-- Playwright end-to-end tests
-- AI triage that summarizes:
-  - failing tests + root causes
-  - missing test areas (low coverage)
-  - suggested code fixes / PR plan
-- **Visual dashboard** artifact (`dashboard.html`) for easy review (not only logs)
-- Optional auto-PR with AI triage markdown when gate fails
+Dans GitHub :
+- Va dans **Actions** → **PoC Demo — Create Jira Epic + Trigger Test Workflow**
+- Clique **Run workflow** → **Run workflow** (vert)
+- (pas besoin de remplir de paramètres)
 
-## Workflows
+Ça crée automatiquement dans Jira :
+- 1 Epic avec un scénario cohérent
+- 7 tickets enfants (tests unitaires, E2E, analyse)
 
-### 1) Unit coverage workflow
-- `.github/workflows/4-unit-tests-coverage.yml`
+### 2. Le workflow de test se lance tout seul
 
-### 2) Epic automated workflow (main PoC)
-- `.github/workflows/5-epic-automated-test-workflow.yml`
+Le script enchaîne automatiquement sur le **Phase 7 — Jira Epic → Fully Automated Test Workflow**.
 
-Triggers:
-- `workflow_dispatch` (manual)
-- `repository_dispatch` with event type: `jira-epic-test-workflow`
+Dans GitHub Actions, tu verras **2 runs** qui s'enchaînent :
+1. `PoC Demo — Create Jira Epic + Trigger Test Workflow` (~30s)
+2. `Phase 7 — Jira Epic → Fully Automated Test Workflow` (~5 min)
 
-## Visual outputs in GitHub Actions
+### 3. Récupère les résultats visuels
 
-Artifacts produced by workflow 5:
+Quand le run Phase 7 est terminé :
+- Ouvre le run → section **Artifacts** (en bas)
+- Télécharge **`ai-test-workflow-dashboard`**
+- Ouvre `dashboard.html` dans ton navigateur
 
-1. `ai-test-workflow-dashboard`
-   - `automation-reports/dashboard.html` (**main visual output**)
-   - `automation-reports/ai-triage-report.md`
-   - `automation-reports/workflow-summary.json`
-2. `playwright-report`
-   - native Playwright HTML report
-3. `unit-coverage`
-   - HTML coverage details
-
-## GitHub secrets required
-
-- `ANTHROPIC_API_KEY` (optional: richer AI narrative)
-  - if missing, deterministic fallback triage is used.
-
-No extra GitHub token setup is required inside workflow runs (uses built-in `secrets.GITHUB_TOKEN`).
+Tu verras :
+- Badges ✅/❌ (unit tests, E2E, gate)
+- Barres de couverture (lines, functions, branches)
+- Tableau des tests en échec (s'il y en a)
+- Fichiers sous-couverts (<50%)
+- Recommandations IA
 
 ---
 
-## Step-by-step: trigger from Jira and visualize full workflow
+## Où voir les choses dans Jira
 
-### Option A (recommended): use your **existing Jira↔GitHub connection**
+L'Epic créé apparaît dans ton projet **SCRUM** sur https://stephaneguren.atlassian.net.
 
-This avoids adding a new Jira PAT for `repository_dispatch`.
-
-1. In Jira, open your Epic and click **Create branch** (via the existing GitHub integration).
-2. Name branch with epic key in the name (example: `SCRUM-123-e2e-hardening`).
-3. The GitHub workflow listens to `create` events and auto-extracts the epic key from branch name.
-4. If `JIRA_EMAIL` + `JIRA_API_TOKEN` secrets are configured in GitHub, the workflow fetches epic summary/description from Jira API automatically.
-
-### Option B: Jira automation via `repository_dispatch`
-
-Use this if you prefer explicit webhook triggering from Jira automation.
-
-1. Go to **Jira Project Settings → Automation**
-2. Click **Create rule**
-3. Choose trigger (recommended):
-   - **Issue transitioned** (e.g. Epic moved to "Ready for QA"), or
-   - **Manual trigger** (for controlled PoC demo)
-4. Add condition:
-   - `Issue Type = Epic`
-5. Add action: **Send web request**
-
-Use this request:
-
-- **Method**: `POST`
-- **URL**: `https://api.github.com/repos/Stefgug/fwebsite/dispatches`
-- **Headers**:
-  - `Accept: application/vnd.github+json`
-  - `Authorization: Bearer <YOUR_...>`
-  - `Content-Type: application/json`
-- **Body**:
-
-```json
-{
-  "event_type": "jira-epic-test-workflow",
-  "client_payload": {
-    "jira_epic_key": "{{issue.key}}",
-    "jira_epic_title": "{{issue.summary}}",
-    "jira_epic_description": "{{issue.description}}"
-  }
-}
-```
-
-Notes:
-- The PAT used in Jira must have repo access to `Stefgug/fwebsite`.
-- For PoC simplicity, use a classic PAT with `repo` scope.
-
-## B) Trigger manually from GitHub (optional fallback)
-
-If you want to demo without Jira first:
-
-1. GitHub repo → **Actions**
-2. Open workflow: **Phase 7 — Jira Epic → Fully Automated Test Workflow**
-3. Click **Run workflow**
-4. Fill:
-   - `jira_epic_key`
-   - `jira_epic_title`
-   - `jira_epic_description`
-5. Run
-
-## C) Visualize results (what to show in demo)
-
-After run completion:
-
-1. Open workflow run in GitHub Actions
-2. Go to **Artifacts**
-3. Download `ai-test-workflow-dashboard`
-4. Open `dashboard.html` locally in browser
-
-What to highlight in the dashboard:
-- top status badges (unit/e2e/gate)
-- coverage bars
-- failing tests table (if any)
-- low-coverage files table
-- AI triage recommendations
-
-Then show:
-- `playwright-report` artifact for UI-level timeline/traces/screenshots
-- `ai-triage-report.md` for detailed suggested corrections
-
-## D) Optional Jira visibility loopback (next increment)
-
-For tighter Jira visibility, add a final workflow step to post back into Jira:
-- workflow URL
-- gate status
-- link/text summary from `ai-triage-report.md`
-
-(Kept out of this PoC to minimize required Jira credentials in GitHub.)
+Tu y trouveras :
+- L'Epic avec la description du PoC
+- 7 tickets enfants détaillant chaque type de test à couvrir
 
 ---
 
-## Gate logic
+## Résumé des workflows disponibles
 
-Workflow is PASS when all are true:
-- unit tests pass
-- e2e tests pass
-- coverage lines >= 50%
+| # | Workflow | Trigger | Rôle |
+|---|----------|---------|------|
+| 1 | `1-ai-commit-to-jira.yml` | push main | Crée un ticket Jira depuis un commit |
+| 2 | `2-playwright-and-ai.yml` | push/PR main | Playwright + analyse IA si échec |
+| 3 | `3-ai-generate-tests.yml` | push main | Génération auto de tests |
+| 4 | `4-unit-tests-coverage.yml` | push/PR main | Tests unitaires + seuil 50% |
+| 5 | `5-epic-automated-test-workflow.yml` | dispatch / Jira branch | Workflow complet piloté par Epic |
+| 6 | `6-demo-create-epic-and-trigger.yml` | dispatch | Crée l'Epic + lance le workflow 5 |
+| 7 | `7-cleanup-scrum43.yml` | dispatch | Nettoie l'Epic dupliqué |
 
-If any fail, visual artifacts are still uploaded, and workflow ends as failed.
+---
+
+## Si tu veux rejouer la démo
+
+1. GitHub → Actions → **PoC Demo — Create Jira Epic + Trigger Test Workflow** → Run workflow
+2. Attends que les 2 runs finissent
+3. Télécharge `ai-test-workflow-dashboard`
