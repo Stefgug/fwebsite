@@ -1,0 +1,33 @@
+name: "Cleanup — Delete duplicate Epic SCRUM-43"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deps
+        run: pip install requests
+      - name: Delete SCRUM-43
+        run: |
+          python -c "
+          import requests, os
+          r = requests.delete(
+              'https://stephaneguren.atlassian.net/rest/api/3/issue/SCRUM-43',
+              auth=(os.environ['JIRA_EMAIL'], os.environ['JIRA_API_TOKEN']),
+              headers={'Accept': 'application/json'},
+              timeout=15
+          )
+          print(f'SCRUM-43: {r.status_code} — deleted' if r.status_code == 204 else f'SCRUM-43: {r.status_code} {r.text[:200]}')
+          "
+        env:
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
