@@ -296,9 +296,28 @@ def render_bar(pct: float, color: str) -> str:
     )
 
 
-def dashboard_html(summary: dict[str, Any], triage_md: str) -> str:
+def dashboard_html(summary: dict[str, Any], triage_md: str, pages_url: str = "") -> str:
     cov = summary["coverage"]
     pw = summary["playwright"]
+
+    live_line = (
+        f"<div class='k' style='margin-top:8px;'>Live URL</div>"
+        f"<div><a href='{html.escape(pages_url)}'>{html.escape(pages_url)}</a></div>"
+        if pages_url
+        else ""
+    )
+    reports_nav = (
+        "<div class='card' style='margin-bottom:16px;'>"
+        "<h2>Detailed reports</h2>"
+        "<p>"
+        "<a href='playwright-report/index.html'>▶ Playwright report</a> &nbsp;·&nbsp; "
+        "<a href='coverage/index.html'>▶ Coverage report</a> &nbsp;·&nbsp; "
+        "<a href='ai-triage-report.md'>▶ AI triage (markdown)</a> &nbsp;·&nbsp; "
+        "<a href='workflow-summary.json'>▶ Raw summary (JSON)</a>"
+        "</p>"
+        f"{live_line}"
+        "</div>"
+    )
 
     fail_rows = "\n".join(
         [
@@ -360,6 +379,8 @@ def dashboard_html(summary: dict[str, Any], triage_md: str) -> str:
     {status_badge(summary['workflow_ok'], 'Workflow gate')}
   </p>
 
+  {reports_nav}
+
   <div class='grid'>
     <div class='card'><div class='k'>Playwright total</div><div class='v'>{pw['total']}</div></div>
     <div class='card'><div class='k'>Playwright passed</div><div class='v'>{pw['passed']}</div></div>
@@ -393,7 +414,7 @@ def dashboard_html(summary: dict[str, Any], triage_md: str) -> str:
 """
 
 
-def write_reports(summary: dict[str, Any], triage_md: str) -> tuple[Path, Path, Path]:
+def write_reports(summary: dict[str, Any], triage_md: str, pages_url: str = "") -> tuple[Path, Path, Path]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     summary_path = REPORTS_DIR / "workflow-summary.json"
     report_path = REPORTS_DIR / "ai-triage-report.md"
@@ -420,7 +441,7 @@ def write_reports(summary: dict[str, Any], triage_md: str) -> tuple[Path, Path, 
         ]
     )
     report_path.write_text(report, encoding="utf-8")
-    dash_path.write_text(dashboard_html(summary, triage_md), encoding="utf-8")
+    dash_path.write_text(dashboard_html(summary, triage_md, pages_url), encoding="utf-8")
     return summary_path, report_path, dash_path
 
 
@@ -479,6 +500,65 @@ def maybe_create_pr(report_path: Path, summary: dict[str, Any]) -> str | None:
     return res.json().get("html_url")
 
 
+def compute_pages_url() -> str:
+    if not GITHUB_REPO or "/" not in GITHUB_REPO:
+        return ""
+    owner, repo = GITHUB_REPO.split("/", 1)
+    return f"https://{owner.lower()}.github.io/{repo}/"
+
+
+def _adf_text(text: str, href: str | None = None) -> dict[str, Any]:
+    node: dict[str, Any] = {"type": "text", "text": text}
+    if href:
+        node["marks"] = [{"type": "link", "attrs": {"href": href}}]
+    return node
+
+
+def post_jira_epic_comment(summary: dict[str, Any], pages_url: str, pr_url: str | None) -> bool:
+    if not (JIRA_EMAIL and JIRA_API_TOKEN):
+        return False
+    if not JIRA_EPIC_KEY or JIRA_EPIC_KEY == "UNKNOWN-EPIC":
+        return False
+
+    cov = summary["coverage"]
+    pw = summary["playwright"]
+    gate = "PASS ✅" if summary["workflow_ok"] else "FAIL ❌"
+
+    content: list[dict[str, Any]] = [
+        {"type": "paragraph", "content": [_adf_text(f"🤖 AI test workflow finished — gate: {gate}")]},
+        {
+            "type": "paragraph",
+            "content": [
+                _adf_text(
+                    f"Unit: {UNIT_OUTCOME} · E2E: {E2E_OUTCOME} · "
+                    f"Coverage(lines): {cov['lines_pct']:.2f}% · "
+                    f"Playwright: {pw['passed']}/{pw['total']} passed, {pw['failed']} failed"
+                )
+            ],
+        },
+    ]
+    if pages_url:
+        content.append(
+            {"type": "paragraph", "content": [_adf_text("📊 Live report: "), _adf_text(pages_url, pages_url)]}
+        )
+    if pr_url:
+        content.append(
+            {"type": "paragraph", "content": [_adf_text("🔧 Auto-fix PR: "), _adf_text(pr_url, pr_url)]}
+        )
+
+    try:
+        res = requests.post(
+            f"{JIRA_BASE_URL}/rest/api/3/issue/{JIRA_EPIC_KEY}/comment",
+            auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            json={"body": {"type": "doc", "version": 1, "content": content}},
+            timeout=20,
+        )
+        return res.ok
+    except Exception:
+        return False
+
+
 def main() -> None:
     hydrate_epic_from_env_or_event()
 
@@ -502,12 +582,16 @@ def main() -> None:
     }
 
     triage = ai_triage(pw, cov)
-    summary_path, report_path, dash_path = write_reports(summary, triage)
+    pages_url = compute_pages_url()
+    summary["pages_url"] = pages_url
+    summary_path, report_path, dash_path = write_reports(summary, triage, pages_url)
 
     pr_url = maybe_create_pr(report_path, summary)
     if pr_url:
         summary["auto_pr_url"] = pr_url
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    jira_commented = post_jira_epic_comment(summary, pages_url, pr_url)
 
     gh_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if gh_step_summary:
@@ -518,6 +602,9 @@ def main() -> None:
             f.write(f"- E2E tests: `{E2E_OUTCOME}`\n")
             f.write(f"- Coverage lines: `{cov['lines_pct']:.2f}%`\n")
             f.write(f"- Workflow gate: **{'PASS ✅' if workflow_ok else 'FAIL ❌'}**\n")
+            if pages_url:
+                f.write(f"- Live report (GitHub Pages): {pages_url}\n")
+            f.write(f"- Jira epic comment posted: {'yes' if jira_commented else 'no'}\n")
             if pr_url:
                 f.write(f"- Auto PR: {pr_url}\n")
             f.write("\nArtifacts:\n")

@@ -22,6 +22,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   epic-test-orchestrator:
@@ -121,6 +123,65 @@ jobs:
           path: automation-reports/
           retention-days: 14
 
+      - name: Assemble GitHub Pages site
+        if: always()
+        run: |
+          mkdir -p _site
+          # AI dashboard + triage report + JSON summary
+          cp -r automation-reports/. _site/ 2>/dev/null || true
+          # Dashboard is the landing page
+          if [ -f _site/dashboard.html ]; then cp _site/dashboard.html _site/index.html; fi
+          # Full Playwright HTML report
+          if [ -d frontend/playwright-report ]; then
+            mkdir -p _site/playwright-report && cp -r frontend/playwright-report/. _site/playwright-report/
+          fi
+          # Istanbul/V8 coverage HTML report
+          if [ -d frontend/coverage ]; then
+            mkdir -p _site/coverage && cp -r frontend/coverage/. _site/coverage/
+          fi
+          # Fallback landing page if the dashboard was never produced
+          if [ ! -f _site/index.html ]; then
+            echo "<!doctype html><meta charset=utf-8><title>AI test report</title><h1>Report unavailable</h1><p>The orchestrator did not produce a dashboard for this run.</p>" > _site/index.html
+          fi
+          echo "Assembled _site:"; find _site -maxdepth 2 -type f | head -40
+
+      - name: Upload Pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
       - name: Fail workflow if tests failed or coverage gate failed
         if: steps.unit.outcome == 'failure' || steps.e2e.outcome == 'failure'
         run: exit 1
+
+  deploy-pages:
+    name: Deploy report to GitHub Pages
+    needs: epic-test-orchestrator
+    # Deploy even when the test gate fails (failing runs are the interesting demo case),
+    # but skip when the orchestrator itself was skipped (e.g. non-branch create events).
+    if: always() && needs.epic-test-orchestrator.result != 'skipped'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    # Serialize only the deployments, so parallel test runs are not blocked.
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Publish live report URL to run summary
+        if: always()
+        run: |
+          {
+            echo "## 🌐 Live AI test report"
+            echo ""
+            echo "Published to GitHub Pages: ${{ steps.deployment.outputs.page_url }}"
+          } >> "$GITHUB_STEP_SUMMARY"

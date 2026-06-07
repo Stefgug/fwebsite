@@ -21,12 +21,13 @@ Dans GitHub Actions, tu verras **2 runs** qui s'enchaînent :
 1. `PoC Demo — Create Jira Epic + Trigger Test Workflow` (~30s)
 2. `Phase 7 — Jira Epic → Fully Automated Test Workflow` (~5 min)
 
-### 3. Récupère les résultats visuels
+### 3. Consulte le rapport en ligne (plus de download/unzip)
 
-Quand le run Phase 7 est terminé :
-- Ouvre le run → section **Artifacts** (en bas)
-- Télécharge **`ai-test-workflow-dashboard`**
-- Ouvre `dashboard.html` dans ton navigateur
+Quand le run Phase 7 est terminé, le rapport est **publié automatiquement sur GitHub Pages** :
+
+➡️ **https://stefgug.github.io/fwebsite/**
+
+(Le lien apparaît aussi dans le **Summary** du run Phase 7, et en **commentaire sur l'Epic Jira**.)
 
 Tu verras :
 - Badges ✅/❌ (unit tests, E2E, gate)
@@ -34,6 +35,9 @@ Tu verras :
 - Tableau des tests en échec (s'il y en a)
 - Fichiers sous-couverts (<50%)
 - Recommandations IA
+- Liens vers le **rapport Playwright complet** et le **rapport de couverture** détaillé
+
+> Le run met toujours à jour la **même URL** (dernier rapport). Les anciens artifacts restent disponibles dans l'onglet Artifacts si besoin.
 
 ---
 
@@ -65,4 +69,15 @@ Tu y trouveras :
 
 1. GitHub → Actions → **PoC Demo — Create Jira Epic + Trigger Test Workflow** → Run workflow
 2. Attends que les 2 runs finissent
-3. Télécharge `ai-test-workflow-dashboard`
+3. Ouvre **https://stefgug.github.io/fwebsite/** (rafraîchis si besoin)
+
+---
+
+## ⚙️ Configuration unique (à faire une seule fois)
+
+Pour que la publication GitHub Pages fonctionne :
+
+1. **GitHub → Settings → Pages → Build and deployment → Source = `GitHub Actions`.**
+2. **Visibilité du dépôt :** GitHub Pages sur un dépôt **privé** nécessite un plan payant (Pro/Team).
+   Sur un plan gratuit, passe le dépôt en **public** (Settings → General → Danger Zone → Change visibility).
+3. C'est tout — le job `Deploy report to GitHub Pages` du workflow Phase 7 s'occupe du reste à chaque run.
