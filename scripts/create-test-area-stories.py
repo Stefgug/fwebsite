@@ -134,7 +134,7 @@ def parse_tests(source: str) -> list[str]:
 # ADF builder
 # ---------------------------------------------------------------------------
 
-def build_adf(coverage_sentence: str, test_names: list[str]) -> dict:
+def build_adf(coverage_sentence: str, test_names: list[str], github_url: str = "") -> dict:
     bullet_items = [
         {
             "type": "listItem",
@@ -169,6 +169,22 @@ def build_adf(coverage_sentence: str, test_names: list[str]) -> dict:
                     }
                 ],
             },
+            *(
+                [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "📂 View test file on GitHub",
+                                "marks": [{"type": "link", "attrs": {"href": github_url}}],
+                            }
+                        ],
+                    }
+                ]
+                if github_url
+                else []
+            ),
         ],
     }
 
@@ -182,7 +198,8 @@ def create_story(area: str, coverage: str, test_names: list[str]) -> str | None:
     POST a Jira Story.  Returns the issue key on success, None on failure.
     """
     summary = f"🧪 Test Area: {area}"
-    description = build_adf(coverage, test_names)
+    github_url = f"https://github.com/Stefgug/fwebsite/blob/main/{spec['path']}"
+    description = build_adf(coverage, test_names, github_url=github_url)
 
     payload = {
         "fields": {
