@@ -1,0 +1,115 @@
+name: "Epic Test Pipeline"
+
+on:
+  repository_dispatch:
+    types: [jira-epic-created]
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  JIRA_BASE_URL: https://stephaneguren.atlassian.net
+  JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+  JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+  JIRA_PROJECT_KEY: SCRUM
+
+jobs:
+  epic-pipeline:
+    name: Epic test pipeline + QA dashboard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install anthropic requests
+
+      - name: Create tickets from Epic
+        run: python scripts/create-tickets-from-epic.py
+        env:
+          JIRA_EPIC_KEY: ${{ github.event.client_payload.jira_epic_key }}
+          JIRA_EPIC_TITLE: ${{ github.event.client_payload.jira_epic_title }}
+          JIRA_EPIC_DESCRIPTION: ${{ github.event.client_payload.jira_epic_description }}
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Install Playwright Chromium
+        run: cd frontend && npx playwright install chromium --with-deps
+
+      - name: Run unit tests
+        id: unit
+        continue-on-error: true
+        run: cd frontend && npx vitest run --coverage || true
+
+      - name: Start mock Strapi
+        run: cd frontend && node ../scripts/mock-strapi.js &
+             sleep 3
+
+      - name: Run Playwright tests
+        id: e2e
+        continue-on-error: true
+        run: cd frontend && npx playwright test || true
+        env:
+          CI: true
+          NEXT_PUBLIC_STRAPI_URL: http://localhost:1999
+
+      - name: AI triage + dashboard
+        if: always()
+        run: python scripts/ai-full-test-workflow.py
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          JIRA_BASE_URL: https://stephaneguren.atlassian.net
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_EPIC_KEY: ${{ github.event.client_payload.jira_epic_key }}
+          JIRA_EPIC_TITLE: ${{ github.event.client_payload.jira_epic_title }}
+          JIRA_EPIC_DESCRIPTION: ${{ github.event.client_payload.jira_epic_description }}
+          UNIT_OUTCOME: ${{ steps.unit.outcome }}
+          E2E_OUTCOME: ${{ steps.e2e.outcome }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          PLAYWRIGHT_RESULTS_FILE: frontend/test-results/results.json
+          COVERAGE_SUMMARY_FILE: frontend/coverage/coverage-summary.json
+
+      - name: Upload test dashboard artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-dashboard
+          path: automation-reports/
+          retention-days: 30
+
+      - name: Upload pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: automation-reports/
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: epic-pipeline
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4

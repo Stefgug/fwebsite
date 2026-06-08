@@ -1,68 +1,147 @@
-# 🎬 Démo PoC — Mode d'emploi simplifié
+# AI Test Workflow PoC — Demo Guide
 
-## En 3 clics, tu déclenches tout
+## Overview
 
-### 1. Lance le workflow démo
+This demo shows an end-to-end AI-augmented QA pipeline triggered directly from Jira:
 
-Dans GitHub :
-- Va dans **Actions** → **PoC Demo — Create Jira Epic + Trigger Test Workflow**
-- Clique **Run workflow** → **Run workflow** (vert)
-- (pas besoin de remplir de paramètres)
+1. **Epic created in Jira** → A Jira Automation rule sends a webhook to GitHub
+2. **Stories auto-created** → Claude generates 5–7 functional test coverage Stories as child tickets under the Epic
+3. **Tests run automatically** → Unit tests (Vitest) and E2E tests (Playwright) execute with a mock Strapi backend
+4. **AI triage runs** → Claude analyses failures and produces a human-readable QA report with functional impact explanations and blind spots
+5. **Visual QA report published** → A polished dashboard is deployed to GitHub Pages at `https://stefgug.github.io/fwebsite/`
 
-Ça crée automatiquement dans Jira :
-- 1 Epic avec un scénario cohérent
-- 7 tickets enfants (tests unitaires, E2E, analyse)
-
-### 2. Le workflow de test se lance tout seul
-
-Le script enchaîne automatiquement sur le **Phase 7 — Jira Epic → Fully Automated Test Workflow**.
-
-Dans GitHub Actions, tu verras **2 runs** qui s'enchaînent :
-1. `PoC Demo — Create Jira Epic + Trigger Test Workflow` (~30s)
-2. `Phase 7 — Jira Epic → Fully Automated Test Workflow` (~5 min)
-
-### 3. Récupère les résultats visuels
-
-Quand le run Phase 7 est terminé :
-- Ouvre le run → section **Artifacts** (en bas)
-- Télécharge **`ai-test-workflow-dashboard`**
-- Ouvre `dashboard.html` dans ton navigateur
-
-Tu verras :
-- Badges ✅/❌ (unit tests, E2E, gate)
-- Barres de couverture (lines, functions, branches)
-- Tableau des tests en échec (s'il y en a)
-- Fichiers sous-couverts (<50%)
-- Recommandations IA
+The entire pipeline is zero-click after the Epic is created. A QA lead can watch the workflow progress in GitHub Actions, then open the dashboard URL and Jira to see the complete picture.
 
 ---
 
-## Où voir les choses dans Jira
+## GitHub Secrets Required
 
-L'Epic créé apparaît dans ton projet **SCRUM** sur https://stephaneguren.atlassian.net.
+| Secret | Description |
+|---|---|
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude (Sonnet 4) — used for AI triage and story generation |
+| `JIRA_EMAIL` | Atlassian account email for Jira API authentication |
+| `JIRA_API_TOKEN` | Generate at https://id.atlassian.com → Security → API tokens |
+| `GITHUB_TOKEN` | Auto-provided by GitHub Actions — no manual setup needed |
 
-Tu y trouveras :
-- L'Epic avec la description du PoC
-- 7 tickets enfants détaillant chaque type de test à couvrir
-
----
-
-## Résumé des workflows disponibles
-
-| # | Workflow | Trigger | Rôle |
-|---|----------|---------|------|
-| 1 | `1-ai-commit-to-jira.yml` | push main | Crée un ticket Jira depuis un commit |
-| 2 | `2-playwright-and-ai.yml` | push/PR main | Playwright + analyse IA si échec |
-| 3 | `3-ai-generate-tests.yml` | push main | Génération auto de tests |
-| 4 | `4-unit-tests-coverage.yml` | push/PR main | Tests unitaires + seuil 50% |
-| 5 | `5-epic-automated-test-workflow.yml` | dispatch / Jira branch | Workflow complet piloté par Epic |
-| 6 | `6-demo-create-epic-and-trigger.yml` | dispatch | Crée l'Epic + lance le workflow 5 |
-| 7 | `7-cleanup-scrum43.yml` | dispatch | Nettoie l'Epic dupliqué |
+**How to set secrets:** Repository → Settings → Secrets and variables → Actions → New repository secret.
 
 ---
 
-## Si tu veux rejouer la démo
+## One-Time Jira Automation Setup
 
-1. GitHub → Actions → **PoC Demo — Create Jira Epic + Trigger Test Workflow** → Run workflow
-2. Attends que les 2 runs finissent
-3. Télécharge `ai-test-workflow-dashboard`
+This must be configured once in your Jira SCRUM project. It creates the bridge that triggers the GitHub pipeline when an Epic is created.
+
+1. Go to your **SCRUM project** on https://stephaneguren.atlassian.net
+2. Navigate to **Project settings** → **Automation** → **Create rule**
+3. Configure the trigger:
+   - **Trigger:** Issue created
+   - **Condition:** Issue Type = Epic
+4. Configure the action:
+   - **Action:** Send web request
+   - **Webhook URL:** `https://api.github.com/repos/Stefgug/fwebsite/dispatches`
+   - **Method:** POST
+   - **Headers:**
+     - `Authorization: Bearer YOUR_GITHUB_PAT`
+     - `Content-Type: application/json`
+     - `Accept: application/vnd.github+json`
+   - **HTTP body:**
+     ```json
+     {
+       "event_type": "jira-epic-created",
+       "client_payload": {
+         "jira_epic_key": "{{issue.key}}",
+         "jira_epic_title": "{{issue.summary}}",
+         "jira_epic_description": "{{issue.description}}"
+       }
+     }
+     ```
+5. **YOUR_GITHUB_PAT** is a GitHub Personal Access Token with `repo` + `actions:write` scopes. Generate it at https://github.com/settings/tokens.
+6. Save and enable the rule.
+
+**Verify the setup:** Create a test Epic in the SCRUM project. The workflow should appear under GitHub Actions within 30 seconds.
+
+---
+
+## Demo Script (Presenter Guide)
+
+### Pre-demo preparation (before the call)
+
+1. Open these tabs in your browser:
+   - https://stephaneguren.atlassian.net → SCRUM project backlog (to see the Epic appear)
+   - https://github.com/Stefgug/fwebsite/actions → filter by `epic-test-pipeline` workflow
+   - https://stefgug.github.io/fwebsite/ → the QA dashboard (will show previous run or 404 before the demo)
+
+### During the demo
+
+**Step 1 — Create the Epic live**
+- In Jira SCRUM project, click **Create** → select **Epic**
+- Give it a meaningful title (e.g. "Shopping Cart Checkout Flow")
+- Add a description (e.g. "As a customer, I want to add products to my cart, adjust quantities, and complete checkout with payment.")
+- Click **Create**
+
+**Step 2 — Watch the workflow trigger**
+- Switch to the GitHub Actions tab
+- A new run of **Epic Test Pipeline** appears automatically (~15–30s after Epic creation)
+- Click into the run to watch progress in real time
+
+**Step 3 — Show child tickets appear in Jira**
+- While the workflow runs, switch back to Jira
+- Refresh the Epic — child Stories now appear under it with functional test descriptions
+- These were generated by Claude based on the Epic description
+
+**Step 4 — Watch tests run**
+- Back in GitHub Actions, watch the steps complete:
+  - `Create tickets from Epic` (Claude generates stories)
+  - `Run unit tests` (Vitest with coverage)
+  - `Run Playwright tests` (E2E against mock Strapi)
+  - `AI triage + dashboard` (Claude analyses results)
+
+**Step 5 — Show the QA dashboard**
+- Open https://stefgug.github.io/fwebsite/
+- Walk through each section:
+  - **Summary banner** — overall test health in plain English
+  - **Test suite status cards** — pass/fail badges and coverage bars
+  - **Failing tests table** — each failure explained with functional impact and QA actions (no code)
+  - **Blind spots** — user journeys not covered by automation, with manual verification guidance
+- Highlight: no raw errors, no stack traces, no code — designed for a QA audience
+
+**Step 6 — Show the Epic comment (if implemented)**
+- Back in Jira, the Epic has a comment with the dashboard URL
+- The report lives permanently on GitHub Pages
+
+---
+
+## Workflow Architecture
+
+### `epic-test-pipeline.yml`
+
+Triggered by `repository_dispatch` event `jira-epic-created`. This is the main demo pipeline:
+
+| Step | What happens |
+|---|---|
+| Checkout + Setup | Node 20, Python 3.12, pip deps |
+| Create tickets from Epic | Claude reads the Epic description and generates 5–7 child Stories in Jira |
+| Unit tests (Vitest) | Runs with coverage (`--coverage`), always continues on failure |
+| Mock Strapi server | Starts a lightweight mock API so Playwright tests can run without a real backend |
+| E2E tests (Playwright) | Runs against the mock, always continues on failure |
+| AI triage + dashboard | Claude analyses test results and produces a QA-friendly `dashboard.html` |
+| Artifact upload | Dashboard saved as workflow artifact (30 days retention) |
+| Pages deploy | Dashboard deployed to `https://stefgug.github.io/fwebsite/` |
+
+### `unit-tests-ci.yml`
+
+Triggered on push and PR to `main`. Runs unit tests with coverage on every change — serves as the standard CI gate independent of the demo pipeline.
+
+---
+
+## Troubleshooting
+
+| Problem | Likely cause | Fix |
+|---|---|---|
+| Workflow doesn't trigger after Epic creation | Jira Automation rule not configured or PAT expired | Verify the rule in Jira → Project settings → Automation. Regenerate GitHub PAT if expired. |
+| 401 on ticket creation | `JIRA_API_TOKEN` invalid or expired | Generate a new token at https://id.atlassian.com → Security → API tokens. Update in GitHub Secrets. |
+| Stories created but no parent link | Jira project doesn't support Epic→Story parent hierarchy | Ensure the project is a Scrum or company-managed project (not team-managed). |
+| Pages shows old report | Pages deployment didn't complete or cached | Wait 1–2 minutes for deployment. Hard-refresh the browser (Ctrl+Shift+R). Check Actions → deploy-pages job. |
+| AI analysis fails / fallback mode | `ANTHROPIC_API_KEY` missing or rate-limited | Verify the key in GitHub Secrets. Check Anthropic usage dashboard for rate limits. Fallback mode still produces a dashboard. |
+| Playwright tests fail | Mock Strapi didn't start in time | Increase the `sleep` after starting mock Strapi (currently 3 seconds). Check `frontend/.env` for `NEXT_PUBLIC_STRAPI_URL`. |
+| Dashboard HTML is empty | Test results JSON files missing | Verify Playwright output at `frontend/test-results/results.json` and coverage at `frontend/coverage/coverage-summary.json`. |
