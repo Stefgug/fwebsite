@@ -43,11 +43,13 @@ def post_comment(body: str) -> None:
 
 
 def extract_proposal(body: str) -> dict | None:
-    m = re.search(r"```json\s*(\{.*?\})\s*```", body, re.DOTALL)
+    # Capture the full fenced block (the JSON contains inner braces, so a
+    # brace-bounded pattern would stop too early). Match up to the closing fence.
+    m = re.search(r"```json\s*(.*?)\s*```", body, re.DOTALL)
     if not m:
         return None
     try:
-        return json.loads(m.group(1))
+        return json.loads(m.group(1).strip())
     except Exception:
         return None
 
