@@ -478,7 +478,7 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any]) -> tuple[Path
     index_path.write_text(dashboard_html(summary, triage), encoding="utf-8")
 
     # Test catalog page
-    catalog_html = generate_catalog_html(summary["playwright"])
+    catalog_html = generate_catalog_html(summary["playwright"], triage)
     catalog_path = REPORTS_DIR / "catalog.html"
     catalog_path.write_text(catalog_html, encoding="utf-8")
     print(f"  ✅ catalog.html written ({len(catalog_html):,} bytes)")
@@ -583,7 +583,7 @@ def post_jira_epic_comment(summary: dict[str, Any], pages_url: str) -> bool:
 
 # --------- Test Catalog ---------
 
-def generate_catalog_html(pw_results: dict) -> str:
+def generate_catalog_html(pw_results: dict, triage: dict | None = None) -> str:
     """Parse spec files and cross-reference with Playwright results to build catalog HTML."""
     import re
     from urllib.parse import quote_plus
@@ -604,6 +604,12 @@ def generate_catalog_html(pw_results: dict) -> str:
     failed_tests = set()
     for f in pw_results.get("failures", []):
         failed_tests.add(f.get("test", ""))
+
+    # Build triage lookup: test_name -> {functional_impact, qa_action}
+    triage_by_test: dict = {}
+    if triage:
+        for ft in triage.get("failing_tests", []):
+            triage_by_test[ft.get("test_name", "")] = ft
 
     e2e_ran = pw_results.get("total", 0) > 0
 
@@ -633,10 +639,27 @@ def generate_catalog_html(pw_results: dict) -> str:
 
             encoded_name = quote_plus(test_name)
             encoded_area = quote_plus(area_name)
+            if test_name in failed_tests and test_name in triage_by_test:
+                ti = triage_by_test[test_name]
+                impact = ti.get("functional_impact", "")
+                action = ti.get("qa_action", "")
+                issue_body = (
+                    f"**Area:** {area_name}\n"
+                    f"**Test:** {test_name}\n\n"
+                    f"**What broke:**\n{impact}\n\n"
+                    f"**Suggested QA action:**\n{action}\n\n"
+                    f"---\n*Auto-generated from the AI test pipeline report.*"
+                )
+            else:
+                issue_body = (
+                    f"Area: {area_name}\n"
+                    f"Test: {test_name}\n\n"
+                    f"Describe the issue or improvement needed:"
+                )
             flag_url = (
                 f"https://github.com/Stefgug/fwebsite/issues/new"
                 f"?title=Test+flag:+{encoded_name}"
-                f"&body=Area:+{encoded_area}%0ATest:+{encoded_name}%0A%0ADescribe+the+issue+or+improvement+needed:"
+                f"&body={quote_plus(issue_body)}"
             )
 
             display_name = test_name[0].upper() + test_name[1:] if test_name else test_name
