@@ -514,6 +514,59 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any]) -> tuple[Path
     return summary_path, report_path, dash_path
 
 
+
+# --------- Jira comment ---------
+
+def _adf_text(text: str, href: str | None = None) -> dict[str, Any]:
+    node: dict[str, Any] = {"type": "text", "text": text}
+    if href:
+        node["marks"] = [{"type": "link", "attrs": {"href": href}}]
+    return node
+
+
+def post_jira_epic_comment(summary: dict[str, Any], pages_url: str) -> bool:
+    if not (JIRA_EMAIL and JIRA_API_TOKEN):
+        return False
+    if not JIRA_EPIC_KEY or JIRA_EPIC_KEY == "UNKNOWN-EPIC":
+        return False
+
+    cov = summary["coverage"]
+    pw = summary["playwright"]
+    gate = "PASS ✅" if summary["workflow_ok"] else "FAIL ❌"
+
+    body_content: list[dict[str, Any]] = [
+        {"type": "paragraph", "content": [_adf_text(f"\U0001f916 AI test pipeline finished — gate: {gate}")]},
+        {
+            "type": "paragraph",
+            "content": [
+                _adf_text(
+                    f"Unit: {UNIT_OUTCOME} · E2E: {E2E_OUTCOME} · "
+                    f"Coverage (lines): {cov['lines_pct']:.2f}% · "
+                    f"Playwright: {pw['passed']}/{pw['total']} passed, {pw['failed']} failed"
+                )
+            ],
+        },
+    ]
+    if pages_url:
+        body_content.append(
+            {
+                "type": "paragraph",
+                "content": [_adf_text("\U0001f4ca Live QA report: "), _adf_text(pages_url, pages_url)],
+            }
+        )
+
+    try:
+        res = requests.post(
+            f"{JIRA_BASE_URL}/rest/api/3/issue/{JIRA_EPIC_KEY}/comment",
+            auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            json={"body": {"type": "doc", "version": 1, "content": body_content}},
+            timeout=20,
+        )
+        return res.ok
+    except Exception:
+        return False
+
 # --------- Main ---------
 
 def main() -> None:
@@ -536,6 +589,9 @@ def main() -> None:
     triage = ai_triage(pw, cov)
     summary_path, report_path, dash_path = write_reports(summary, triage)
 
+    pages_url = "https://stefgug.github.io/fwebsite/"
+    jira_commented = post_jira_epic_comment(summary, pages_url)
+
     gh_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if gh_step_summary:
         with open(gh_step_summary, "a", encoding="utf-8") as f:
@@ -549,10 +605,14 @@ def main() -> None:
             f.write("- `automation-reports/dashboard.html`\n")
             f.write("- `automation-reports/ai-triage-report.md`\n")
             f.write("- `automation-reports/workflow-summary.json`\n")
+            f.write(f"- Live report (GitHub Pages): {pages_url}\n")
+            f.write(f"- Jira epic comment posted: {'yes' if jira_commented else 'no'}\n")
 
     print(f"summary={summary_path}")
     print(f"report={report_path}")
     print(f"dashboard={dash_path}")
+    if jira_commented:
+        print("jira_comment=posted")
 
 
 if __name__ == "__main__":
