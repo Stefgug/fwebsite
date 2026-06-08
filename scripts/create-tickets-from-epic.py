@@ -162,7 +162,7 @@ Do NOT include markdown fences, prose, or any text outside the JSON array."""
                 "project": {"key": JIRA_PROJECT_KEY},
                 "summary": summary[:100],
                 "description": adf_text_para(description_text),
-                "issuetype": {"id": "10003"},  # Task (Tâche) — only non-Epic, non-Subtask type in this project
+                "issuetype": {"name": "Story"},
                 "parent": {"key": JIRA_EPIC_KEY},
             }
         }
