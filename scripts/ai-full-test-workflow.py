@@ -469,6 +469,10 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any]) -> tuple[Path
     full_summary = {**summary, "ai_triage": triage}
     summary_path.write_text(json.dumps(full_summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
+    # GitHub Pages requires index.html as entry point
+    index_path = REPORTS_DIR / "index.html"
+    index_path.write_text(dashboard_html(summary, triage), encoding="utf-8")
+
     # Build readable markdown report
     ai_summary = triage.get("summary", "No summary available.")
     failing = triage.get("failing_tests", [])
