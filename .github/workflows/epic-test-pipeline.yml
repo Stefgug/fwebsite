@@ -15,6 +15,7 @@ env:
   JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
   JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
   JIRA_PROJECT_KEY: SCRUM
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   epic-pipeline:
