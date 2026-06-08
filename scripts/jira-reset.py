@@ -12,12 +12,12 @@ headers = {"Accept": "application/json", "Content-Type": "application/json"}
 def fetch_all_keys():
     keys, start = [], 0
     while True:
-        r = requests.post(
-            f"{JIRA_BASE_URL}/rest/api/3/issue/search",
-            auth=auth, headers=headers,
-            json={"jql": f"project = {PROJECT_KEY} ORDER BY created ASC",
-                  "maxResults": 100, "startAt": start,
-                  "fields": ["summary"]},
+        r = requests.get(
+            f"{JIRA_BASE_URL}/rest/api/3/search",
+            auth=auth, headers={"Accept": "application/json"},
+            params={"jql": f"project = {PROJECT_KEY} ORDER BY created ASC",
+                    "maxResults": 100, "startAt": start,
+                    "fields": "summary"},
             timeout=20,
         )
         if not r.ok:
