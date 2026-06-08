@@ -1,0 +1,55 @@
+name: "Run Proposed Test"
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  run-proposal:
+    name: Apply & validate AI-proposed test
+    if: github.event.label.name == 'run-proposed-test'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Acknowledge
+        run: echo "Running proposed test from issue #${{ github.event.issue.number }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install requests
+
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+
+      - name: Install Playwright Chromium
+        run: cd frontend && npx playwright install chromium --with-deps
+
+      - name: Apply proposal and run test
+        run: python scripts/apply-and-run-proposal.py
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: true
