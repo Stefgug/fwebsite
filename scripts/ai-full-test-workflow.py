@@ -993,6 +993,13 @@ EXISTING TEST SUITE (full source - use for dedup and exact-match anchors):
         code = (p.get("proposed_code") or "").strip()
         if kind not in ("new_test", "modify_test") or not code or not tname:
             continue
+        # Normalize target_file to the canonical repo path and drop proposals
+        # that point at a spec file which does not actually exist.
+        base = (p.get("target_file") or "").strip().replace("\\", "/").rsplit("/", 1)[-1]
+        if base not in SPEC_FILES:
+            print(f"  skip proposal with unknown target_file '{p.get('target_file')}'")
+            continue
+        p["target_file"] = f"frontend/tests/{base}"
         if kind == "new_test" and tname.lower() in seen_names:
             print(f"  skip duplicate new test '{tname}' (already covered)")
             continue
