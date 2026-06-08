@@ -80,10 +80,22 @@ def _replace_test_by_name(content: str, name: str, replacement: str) -> str | No
     return None
 
 
+def _normalize_target(target: str) -> str | None:
+    """Accept 'auth.spec.ts', 'tests/auth.spec.ts' or 'frontend/tests/auth.spec.ts'
+    and return the canonical repo path. Reject anything unsafe or non-spec."""
+    t = (target or "").strip().replace("\\", "/")
+    if not t or ".." in t:
+        return None
+    base = t.rsplit("/", 1)[-1]
+    if not base.endswith(".spec.ts"):
+        return None
+    return f"frontend/tests/{base}"
+
+
 def apply_proposal(p: dict) -> tuple[bool, str]:
-    target = (p.get("target_file") or "").strip()
-    if not target or ".." in target or not target.startswith("frontend/tests/"):
-        return False, f"Invalid target_file: {target!r}"
+    target = _normalize_target(p.get("target_file"))
+    if not target:
+        return False, f"Invalid target_file: {p.get('target_file')!r}"
     path = ROOT / target
     if not path.exists():
         return False, f"Target file not found: {target}"
@@ -146,7 +158,8 @@ def main() -> None:
         post_comment(f"**Could not apply the proposed change.**\n\n{info}")
         return
 
-    passed, output = run_test(proposal["target_file"], test_name)
+    # apply_proposal returns the canonical path in `info` on success
+    passed, output = run_test(info, test_name)
     proposed_code = proposal.get("proposed_code", "")
 
     status = "PASSED" if passed else "FAILED"
