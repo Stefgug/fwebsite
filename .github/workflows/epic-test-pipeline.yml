@@ -39,7 +39,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python dependencies
-        run: pip install anthropic requests
+        run: pip install anthropic requests pillow
 
       - name: Create tickets from Epic
         run: python scripts/create-tickets-from-epic.py
