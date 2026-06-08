@@ -48,6 +48,11 @@ jobs:
           JIRA_EPIC_TITLE: ${{ github.event.client_payload.jira_epic_title }}
           JIRA_EPIC_DESCRIPTION: ${{ github.event.client_payload.jira_epic_description }}
 
+      - name: Create test area stories in Jira
+        run: python scripts/create-test-area-stories.py
+        env:
+          JIRA_EPIC_KEY: ${{ github.event.client_payload.jira_epic_key }}
+
       - name: Install frontend dependencies
         run: cd frontend && npm ci
 
