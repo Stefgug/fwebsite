@@ -193,12 +193,11 @@ def build_adf(coverage_sentence: str, test_names: list[str], github_url: str = "
 # Jira API
 # ---------------------------------------------------------------------------
 
-def create_story(area: str, coverage: str, test_names: list[str]) -> str | None:
+def create_story(area: str, coverage: str, test_names: list[str], github_url: str = "") -> str | None:
     """
     POST a Jira Story.  Returns the issue key on success, None on failure.
     """
     summary = f"🧪 Test Area: {area}"
-    github_url = f"https://github.com/Stefgug/fwebsite/blob/main/{spec['path']}"
     description = build_adf(coverage, test_names, github_url=github_url)
 
     payload = {
@@ -254,7 +253,8 @@ def main() -> None:
             print(f"  WARNING: no test names found in {spec['path']} — will create story with empty list")
 
         # Create story
-        key = create_story(area, spec["coverage"], test_names)
+        gh_url = f"https://github.com/Stefgug/fwebsite/blob/main/{spec['path']}"
+        key = create_story(area, spec["coverage"], test_names, github_url=gh_url)
         if key:
             print(f"Created: {key} — Test Area: {area}")
             created += 1
