@@ -11,3 +11,8 @@ frontend/.next/
 frontend/playwright-report/
 frontend/test-results/
 frontend/tests-examples/
+
+# Generated automation/report artifacts
+automation-reports/
+_site/
+__pycache__/
