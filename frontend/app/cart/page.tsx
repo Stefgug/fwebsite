@@ -55,7 +55,7 @@ export default function CartPage() {
           <span>{formatPrice(totalPrice)}</span>
         </div>
 
-        <Link href="/checkout" className="block mt-6">
+        <Link href="/order/checkout" className="block mt-6">
           <Button size="lg" className="w-full">
             Proceed to Checkout
           </Button>
