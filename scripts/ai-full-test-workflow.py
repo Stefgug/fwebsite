@@ -660,6 +660,7 @@ def generate_catalog_html(pw_results: dict) -> str:
             <div style="padding:18px 22px 10px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
                 <h2 style="margin:0;font-size:20px;color:#1a1a2e;flex:1;">{area_name}</h2>
                 {count_badge}
+                <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/{spec_file}" target="_blank" style="font-size:12px;color:#6b7280;text-decoration:none;white-space:nowrap;">📂 View on GitHub</a>
             </div>
             <div style="padding:0 22px 12px 22px;color:#718096;font-size:14px;">{description}</div>
             <div style="overflow-x:auto;">
