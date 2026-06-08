@@ -464,7 +464,7 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any]) -> str:
 
 # --------- Report writing ---------
 
-def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_links: dict | None = None) -> tuple[Path, Path, Path]:
+def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_links: dict | None = None, proposals: list | None = None) -> tuple[Path, Path, Path]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     summary_path = REPORTS_DIR / "workflow-summary.json"
     report_path = REPORTS_DIR / "ai-triage-report.md"
@@ -479,7 +479,15 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
     index_path.write_text(dashboard_html(summary, triage), encoding="utf-8")
 
     # Test catalog page
-    catalog_html = generate_catalog_html(summary["playwright"], triage, jira_bug_links)
+    (REPORTS_DIR / "proposed-tests.json").write_text(
+        json.dumps(
+            {"generated_at": RUN_TIMESTAMP, "epic_key": JIRA_EPIC_KEY,
+             "run_id": GITHUB_RUN_ID, "proposals": proposals or []},
+            ensure_ascii=False, indent=2,
+        ),
+        encoding="utf-8",
+    )
+    catalog_html = generate_catalog_html(summary["playwright"], triage, jira_bug_links, proposals)
     catalog_path = REPORTS_DIR / "catalog.html"
     catalog_path.write_text(catalog_html, encoding="utf-8")
     print(f"  ✅ catalog.html written ({len(catalog_html):,} bytes)")
@@ -698,7 +706,7 @@ def create_jira_bugs_for_failing_tests(triage: dict, epic_key: str) -> dict[str,
 
 # --------- Test Catalog ---------
 
-def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug_links: dict | None = None) -> str:
+def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug_links: dict | None = None, proposals: list | None = None) -> str:
     """Parse spec files and cross-reference with Playwright results to build catalog HTML."""
     import re
     from urllib.parse import quote_plus
@@ -727,6 +735,8 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
             triage_by_test[ft.get("test_name", "")] = ft
 
     e2e_ran = pw_results.get("total", 0) > 0
+
+    proposals_html = proposals_section_html(proposals or [])
 
     # Build area cards HTML
     area_cards_html = ""
@@ -858,6 +868,8 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
             This catalog lists all automated Playwright tests. QA testers can use this page to understand test coverage and flag tests that need attention.
         </p>
 
+        {proposals_html}
+
         {area_cards_html}
     </main>
 
@@ -868,6 +880,213 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
 </html>"""
 
     return html
+
+
+# --------- Test Proposal Generation (Phase 1) ---------
+
+SPEC_FILES = [
+    "home.spec.ts", "navigation.spec.ts", "products.spec.ts",
+    "cart.spec.ts", "auth.spec.ts", "about.spec.ts",
+]
+
+
+def read_all_spec_files() -> dict[str, str]:
+    """Return {spec_filename: full_source} for all known spec files."""
+    specs: dict[str, str] = {}
+    for name in SPEC_FILES:
+        p = ROOT / "frontend" / "tests" / name
+        try:
+            specs[name] = p.read_text(encoding="utf-8")
+        except Exception:
+            specs[name] = ""
+    return specs
+
+
+def _all_existing_test_names(specs: dict[str, str]) -> set[str]:
+    names: set[str] = set()
+    for src in specs.values():
+        for m in re.findall(r"test\(['\"](.+?)['\"]", src):
+            names.add(m.strip())
+    return names
+
+
+def generate_test_proposals(triage: dict[str, Any], playwright: dict[str, Any]) -> list[dict[str, Any]]:
+    """Ask Claude to propose NEW tests (for blind spots) and MODIFICATIONS (for failing
+    tests that are genuinely outdated), ensuring no proposal duplicates existing coverage."""
+    if not ANTHROPIC_API_KEY or anthropic is None:
+        return []
+
+    failing = triage.get("failing_tests", [])
+    blind_spots = triage.get("blind_spots", [])
+    if not failing and not blind_spots:
+        return []
+
+    specs = read_all_spec_files()
+    existing_names = _all_existing_test_names(specs)
+    specs_blob = "\n\n".join(
+        f"=== frontend/tests/{name} ===\n{src}" for name, src in specs.items() if src
+    )
+    failing_blob = json.dumps(failing, ensure_ascii=False, indent=2)
+    blind_blob = json.dumps(blind_spots, ensure_ascii=False, indent=2)
+
+    prompt = f"""You are a senior QA automation engineer working on a Playwright E2E suite for an e-commerce site (Next.js, baseURL http://localhost:3000, backed by mock data).
+
+Your job: propose HIGH-VALUE end-to-end / business-level test improvements - NEVER trivial micro-tests. Two kinds:
+1. "new_test" - for a genuine COVERAGE GAP (blind spot) not already tested anywhere.
+2. "modify_test" - ONLY when an existing test FAILED because the application legitimately changed and the test is now outdated. If a test failed because it caught a REAL BUG (the app is broken / behaving wrongly), DO NOT propose modifying the test to make it pass - that would hide the bug. Skip it instead.
+
+CRITICAL DEDUP RULE: Before proposing any new_test, verify the behaviour is not ALREADY covered by ANY existing test across ALL files below. If it is already covered, DO NOT propose it. For every proposal, fill "coverage_check" naming the existing tests you checked and why a gap remains.
+
+Write tests in the SAME style as the existing files: `import {{ test, expect }} from '@playwright/test';` and `test.describe('...', () => {{ test('...', async ({{ page }}) => {{ ... }}) }})`. Known facts: product slug `macbook-pro-14` exists; login credentials are test@example.com / password123; cart localStorage key is `fwebsite-cart`.
+
+For "new_test": "proposed_code" MUST be a COMPLETE, self-contained `test.describe(...)` block (including the import line) that can be APPENDED to the end of the target file and run as-is. Leave "existing_code" as "".
+For "modify_test": "existing_code" MUST be the EXACT verbatim block of the current failing test copied from the file below (so it can be string-matched), and "proposed_code" the full replacement `test(...)` block.
+
+Return ONLY a JSON object: {{"proposals": [ ... ]}}. Max 4 proposals, highest value first. Each proposal object has keys:
+- "kind": "new_test" | "modify_test"
+- "trigger": "blind_spot" | "failing_test"
+- "title": short human title
+- "rationale": 1-2 plain-English sentences on the business value (for a non-technical QA lead)
+- "coverage_check": which existing tests you checked; why this is not a duplicate (or for modify, why the change is safe and not hiding a bug)
+- "target_file": one of {SPEC_FILES}
+- "test_name": the exact test title string used inside proposed_code
+- "existing_code": verbatim current block (modify_test only; else "")
+- "proposed_code": the test code as described above
+
+If there is nothing genuinely valuable and non-duplicate to add, return {{"proposals": []}}.
+
+FAILING TESTS:
+{failing_blob}
+
+BLIND SPOTS:
+{blind_blob}
+
+EXISTING TEST SUITE (full source - use for dedup and exact-match anchors):
+{specs_blob}
+"""
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        msg = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=4000,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        text = "\n".join(c.text for c in msg.content if getattr(c, "type", "") == "text").strip()
+        cleaned = text
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*\n", "", cleaned)
+            cleaned = re.sub(r"\n```\s*$", "", cleaned)
+        data = json.loads(cleaned)
+        proposals = data.get("proposals", []) if isinstance(data, dict) else []
+    except Exception as exc:
+        print(f"  WARN  Proposal generation failed: {exc}")
+        return []
+
+    clean: list[dict[str, Any]] = []
+    seen_names = {n.lower() for n in existing_names}
+    for i, p in enumerate(proposals, 1):
+        if not isinstance(p, dict):
+            continue
+        kind = p.get("kind")
+        tname = (p.get("test_name") or "").strip()
+        code = (p.get("proposed_code") or "").strip()
+        if kind not in ("new_test", "modify_test") or not code or not tname:
+            continue
+        if kind == "new_test" and tname.lower() in seen_names:
+            print(f"  skip duplicate new test '{tname}' (already covered)")
+            continue
+        if kind == "modify_test" and not (p.get("existing_code") or "").strip():
+            continue
+        p["id"] = f"prop-{i}"
+        if kind == "new_test":
+            seen_names.add(tname.lower())
+        clean.append(p)
+    print(f"  generated {len(clean)} test proposal(s)")
+    return clean
+
+
+def _proposal_issue_url(p: dict[str, Any]) -> str:
+    from urllib.parse import quote_plus
+    payload = {
+        "id": p.get("id"),
+        "kind": p.get("kind"),
+        "target_file": p.get("target_file"),
+        "test_name": p.get("test_name"),
+        "existing_code": p.get("existing_code", ""),
+        "proposed_code": p.get("proposed_code", ""),
+    }
+    body = (
+        f"**AI-proposed test {'modification' if p.get('kind') == 'modify_test' else '(new)'}**\n\n"
+        f"**Rationale:** {p.get('rationale', '')}\n\n"
+        f"**Coverage check:** {p.get('coverage_check', '')}\n\n"
+        "Approving this issue (it already carries the `run-proposed-test` label) will apply the change "
+        "and run the test once. Nothing is committed automatically.\n\n"
+        f"```json\n{json.dumps(payload, ensure_ascii=False)}\n```\n"
+    )
+    title = f"[QA Proposal] {p.get('title', 'test improvement')}"
+    return (
+        "https://github.com/Stefgug/fwebsite/issues/new"
+        f"?title={quote_plus(title)}"
+        f"&labels={quote_plus('run-proposed-test')}"
+        f"&body={quote_plus(body)}"
+    )
+
+
+def proposals_section_html(proposals: list[dict[str, Any]]) -> str:
+    if not proposals:
+        return ""
+    cards = ""
+    for p in proposals:
+        kind = p.get("kind")
+        if kind == "modify_test":
+            badge = '<span style="background:#8b5cf6;color:#fff;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">EDIT Modify existing test</span>'
+            border = "#8b5cf6"
+        else:
+            badge = '<span style="background:#10b981;color:#fff;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">NEW test</span>'
+            border = "#10b981"
+        url = _proposal_issue_url(p)
+        existing = html.escape(p.get("existing_code", "") or "")
+        proposed = html.escape(p.get("proposed_code", "") or "")
+        if kind == "modify_test" and existing:
+            diff_block = f"""
+            <details style="margin-top:10px;">
+              <summary style="cursor:pointer;color:#6b7280;font-size:13px;">View change</summary>
+              <div style="font-size:12px;color:#991b1b;font-weight:600;margin-top:8px;">- Current</div>
+              <pre style="background:#fef2f2;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;"><code>{existing}</code></pre>
+              <div style="font-size:12px;color:#166534;font-weight:600;">+ Proposed</div>
+              <pre style="background:#f0fdf4;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;"><code>{proposed}</code></pre>
+            </details>"""
+        else:
+            diff_block = f"""
+            <details style="margin-top:10px;">
+              <summary style="cursor:pointer;color:#6b7280;font-size:13px;">View proposed test code</summary>
+              <pre style="background:#f0fdf4;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;"><code>{proposed}</code></pre>
+            </details>"""
+        cards += f"""
+        <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:18px;padding:18px 22px;border-left:5px solid {border};">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+                {badge}
+                <h3 style="margin:0;font-size:17px;color:#1a1a2e;flex:1;">{html.escape(p.get('title', ''))}</h3>
+                <code style="font-size:12px;color:#6b7280;">{html.escape(p.get('target_file', ''))}</code>
+            </div>
+            <p style="color:#4a5568;font-size:14px;margin:6px 0;line-height:1.55;">{html.escape(p.get('rationale', ''))}</p>
+            <p style="color:#718096;font-size:13px;margin:6px 0;line-height:1.5;"><strong>Coverage check:</strong> {html.escape(p.get('coverage_check', ''))}</p>
+            {diff_block}
+            <div style="margin-top:14px;">
+                <a href="{url}" target="_blank" style="display:inline-block;background:#1a1a2e;color:#fff;padding:9px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">Accept &amp; run this test</a>
+            </div>
+        </div>"""
+
+    return f"""
+        <section style="margin-bottom:32px;">
+            <h2 style="font-size:22px;color:#1a1a2e;margin-bottom:6px;">AI-Proposed Test Improvements</h2>
+            <p style="color:#718096;font-size:14px;margin-bottom:18px;line-height:1.55;">
+                Claude analysed the failures and coverage gaps, then proposed the high-value tests below - each checked against the existing suite to avoid duplication.
+                Click <strong>Accept &amp; run</strong> to apply the change and validate it in a one-off run (no code is committed automatically).
+            </p>
+            {cards}
+        </section>"""
 
 
 # --------- Main ---------
@@ -891,7 +1110,8 @@ def main() -> None:
 
     triage = ai_triage(pw, cov)
     jira_bug_links = create_jira_bugs_for_failing_tests(triage, JIRA_EPIC_KEY)
-    summary_path, report_path, dash_path = write_reports(summary, triage, jira_bug_links)
+    proposals = generate_test_proposals(triage, pw)
+    summary_path, report_path, dash_path = write_reports(summary, triage, jira_bug_links, proposals)
 
     pages_url = "https://stefgug.github.io/fwebsite/"
     jira_commented = post_jira_epic_comment(summary, pages_url)
