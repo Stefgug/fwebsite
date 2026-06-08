@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import base64
 import html
 import json
 import os
 import re
+import shutil
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -53,6 +55,7 @@ class PlaywrightFailure:
     file: str
     test: str
     error: str
+    screenshot: str = ""
 
 
 # --------- Data loading ---------
@@ -159,11 +162,17 @@ def parse_playwright_results(data: dict[str, Any] | None) -> dict[str, Any]:
                             or result.get("error")
                             or "No error message"
                         )
+                        shot = ""
+                        for att in (result.get("attachments") or []):
+                            if (att.get("contentType") or "").startswith("image/") and att.get("path"):
+                                shot = att["path"]
+                                break
                         failures.append(
                             PlaywrightFailure(
                                 file=suite_file or "unknown-file",
                                 test=title,
                                 error=str(err_msg)[:1200],
+                                screenshot=shot,
                             )
                         )
 
@@ -347,9 +356,130 @@ def coverage_bar(pct: float) -> str:
     )
 
 
+# --------- Visual evidence (screenshots + red-box annotation) ---------
+
+def _safe_name(s: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9_-]+", "_", s)[:60] or "shot"
+
+
+def _annotate_bbox(src: Path, dst: Path, bbox: dict | None, label: str) -> bool:
+    """Draw a red box (and small label) on a copy of the screenshot. Falls back to a plain copy."""
+    try:
+        from PIL import Image, ImageDraw
+    except Exception:
+        try:
+            shutil.copyfile(src, dst)
+            return True
+        except Exception:
+            return False
+    try:
+        img = Image.open(src).convert("RGB")
+        if bbox:
+            W, H = img.size
+            x = max(0, int(float(bbox.get("x", 0)) * W))
+            y = max(0, int(float(bbox.get("y", 0)) * H))
+            w = int(float(bbox.get("width", 0)) * W)
+            h = int(float(bbox.get("height", 0)) * H)
+            if w > 2 and h > 2:
+                draw = ImageDraw.Draw(img)
+                for off in range(5):
+                    draw.rectangle([x - off, y - off, x + w + off, y + h + off], outline=(231, 76, 60))
+                if label:
+                    ty = max(0, y - 20)
+                    draw.rectangle([x, ty, x + 8 + len(label) * 7, ty + 18], fill=(231, 76, 60))
+                    draw.text((x + 4, ty + 4), label, fill=(255, 255, 255))
+        img.save(dst)
+        return True
+    except Exception:
+        try:
+            shutil.copyfile(src, dst)
+            return True
+        except Exception:
+            return False
+
+
+def _vision_bbox(src: Path, test_name: str, impact: str) -> tuple[dict | None, str]:
+    """Ask Claude vision for the bounding box of the problem area. Best-effort; returns (bbox, label)."""
+    if not ANTHROPIC_API_KEY or anthropic is None:
+        return None, ""
+    try:
+        import io
+        from PIL import Image
+        img = Image.open(src).convert("RGB")
+        max_w = 1024
+        if img.width > max_w:
+            ratio = max_w / img.width
+            img = img.resize((max_w, int(img.height * ratio)))
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode()
+    except Exception:
+        try:
+            b64 = base64.b64encode(src.read_bytes()).decode()
+        except Exception:
+            return None, ""
+    prompt = (
+        f"This screenshot is from a FAILED end-to-end UI test named '{test_name}'. "
+        f"The functional problem is: {impact}\n\n"
+        "Identify the SINGLE rectangular region of the page most relevant to this failure "
+        "(the broken, missing, or misplaced element - or the area where the expected element should be). "
+        "Return ONLY a JSON object with fractions of the image dimensions (0.0-1.0): "
+        '{"x":float,"y":float,"width":float,"height":float,"label":"3-5 word description"}. '
+        "No prose, no code fences."
+    )
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        msg = client.messages.create(
+            model="claude-sonnet-4-6",
+            max_tokens=300,
+            messages=[{"role": "user", "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": b64}},
+                {"type": "text", "text": prompt},
+            ]}],
+        )
+        text = "\n".join(c.text for c in msg.content if getattr(c, "type", "") == "text").strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*\n", "", text)
+            text = re.sub(r"\n```\s*$", "", text)
+        data = json.loads(text)
+        label = str(data.get("label", ""))[:40]
+        bbox = {k: float(data[k]) for k in ("x", "y", "width", "height") if k in data}
+        if all(k in bbox for k in ("x", "y", "width", "height")):
+            return bbox, label
+    except Exception as exc:
+        print(f"  vision annotation failed for '{test_name}': {exc}")
+    return None, ""
+
+
+def build_visual_evidence(failures: list[dict], triage: dict | None = None) -> dict[str, dict]:
+    """Copy each failure screenshot into the report and draw a red box on the problem area."""
+    evidence: dict[str, dict] = {}
+    impact_by_test: dict[str, str] = {}
+    if triage:
+        for ft in triage.get("failing_tests", []):
+            impact_by_test[ft.get("test_name", "")] = ft.get("functional_impact", "")
+    shots_dir = REPORTS_DIR / "screenshots"
+    for f in failures:
+        shot = f.get("screenshot") or ""
+        if not shot:
+            continue
+        src = Path(shot)
+        if not src.exists():
+            continue
+        shots_dir.mkdir(parents=True, exist_ok=True)
+        test_name = f.get("test", "test")
+        impact = impact_by_test.get(test_name) or f.get("error", "")
+        bbox, label = _vision_bbox(src, test_name, impact)
+        dst = shots_dir / f"{_safe_name(test_name)}.png"
+        if _annotate_bbox(src, dst, bbox, label):
+            evidence[test_name] = {"image": f"screenshots/{dst.name}", "label": label}
+            print(f"  visual evidence for '{test_name}'" + (f" (boxed: {label})" if bbox else " (plain)"))
+    return evidence
+
+
 # --------- Dashboard HTML ---------
 
-def dashboard_html(summary: dict[str, Any], triage: dict[str, Any]) -> str:
+def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evidence: dict | None = None) -> str:
     cov = summary["coverage"]
     pw = summary["playwright"]
 
@@ -398,6 +528,23 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any]) -> str:
         <ul>{blind_items}</ul>
         <p class="blind-note"><em>These areas should be verified manually or a new automated test should be requested.</em></p>
     </div>"""
+
+    visual_evidence = visual_evidence or {}
+    if visual_evidence:
+        ev_cards = ""
+        for _tname, _ev in visual_evidence.items():
+            _label = html.escape(_ev.get("label", "") or "")
+            _label_html = f'<div style="color:#e74c3c;font-size:13px;font-weight:600;margin-bottom:6px;">&#9656; {_label}</div>' if _label else ""
+            ev_cards += f"""<div class="card" style="grid-column:1/-1;">
+                <div class="card-title">{html.escape(_tname)}</div>
+                {_label_html}
+                <img src="{html.escape(_ev.get('image', ''))}" alt="Screenshot of {html.escape(_tname)}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0;margin-top:6px;" />
+            </div>"""
+        visual_section = f"""<h2>Visual Evidence - What the tester would see</h2>
+        <p style="color:#64748b;font-size:13px;margin-bottom:12px;">Screenshots captured automatically the moment each test failed. The red box highlights the area linked to the problem.</p>
+        <div class="grid">{ev_cards}</div>"""
+    else:
+        visual_section = ""
 
     return f"""<!doctype html>
 <html lang="en">
@@ -450,6 +597,8 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any]) -> str:
 
     {failing_section}
 
+    {visual_section}
+
     {blind_section}
 
     <div style="text-align:center;margin-top:24px;">
@@ -475,8 +624,9 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
     summary_path.write_text(json.dumps(full_summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # GitHub Pages requires index.html as entry point
+    visual_evidence = build_visual_evidence(summary["playwright"].get("failures", []), triage)
     index_path = REPORTS_DIR / "index.html"
-    index_path.write_text(dashboard_html(summary, triage), encoding="utf-8")
+    index_path.write_text(dashboard_html(summary, triage, visual_evidence), encoding="utf-8")
 
     # Test catalog page
     (REPORTS_DIR / "proposed-tests.json").write_text(
@@ -533,7 +683,7 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
         report_lines.append("")
 
     report_path.write_text("\n".join(report_lines), encoding="utf-8")
-    dash_path.write_text(dashboard_html(summary, triage), encoding="utf-8")
+    dash_path.write_text(dashboard_html(summary, triage, visual_evidence), encoding="utf-8")
     return summary_path, report_path, dash_path
 
 
