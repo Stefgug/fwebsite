@@ -5,8 +5,8 @@ import html
 import json
 import os
 import re
-import subprocess
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,9 +17,9 @@ try:
 except Exception:
     anthropic = None
 
+# --------- Paths ---------
 ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = ROOT / "automation-reports"
-FIX_NOTES_DIR = ROOT / "fix-notes"
 
 PLAYWRIGHT_RESULTS_FILE = Path(
     os.environ.get("PLAYWRIGHT_RESULTS_FILE", str(ROOT / "frontend/test-results/results.json"))
@@ -28,6 +28,7 @@ COVERAGE_SUMMARY_FILE = Path(
     os.environ.get("COVERAGE_SUMMARY_FILE", str(ROOT / "frontend/coverage/coverage-summary.json"))
 )
 
+# --------- Environment ---------
 JIRA_EPIC_KEY = os.environ.get("JIRA_EPIC_KEY", "UNKNOWN-EPIC")
 JIRA_EPIC_TITLE = os.environ.get("JIRA_EPIC_TITLE", "No epic title provided")
 JIRA_EPIC_DESCRIPTION = os.environ.get("JIRA_EPIC_DESCRIPTION", "")
@@ -38,12 +39,12 @@ JIRA_API_TOKEN = os.environ.get("JIRA_API_TOKEN", "")
 UNIT_OUTCOME = os.environ.get("UNIT_OUTCOME", "unknown")
 E2E_OUTCOME = os.environ.get("E2E_OUTCOME", "unknown")
 
-GITHUB_REPO = os.environ.get("GITHUB_REPOSITORY", os.environ.get("GITHUB_REPO", ""))
 GITHUB_SHA = os.environ.get("GITHUB_SHA", "")
 GITHUB_RUN_ID = os.environ.get("GITHUB_RUN_ID", "")
-GH_TOKEN = os.environ.get("GH_TOKEN", os.environ.get("GITHUB_TOKEN", ""))
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+
+RUN_TIMESTAMP = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
 @dataclass
@@ -52,6 +53,8 @@ class PlaywrightFailure:
     test: str
     error: str
 
+
+# --------- Data loading ---------
 
 def load_json(path: Path) -> dict[str, Any] | None:
     if not path.exists():
@@ -114,6 +117,8 @@ def hydrate_epic_from_env_or_event() -> None:
         except Exception:
             pass
 
+
+# --------- Parsers ---------
 
 def parse_playwright_results(data: dict[str, Any] | None) -> dict[str, Any]:
     if not data:
@@ -209,37 +214,47 @@ def parse_coverage_summary(data: dict[str, Any] | None) -> dict[str, Any]:
     return out
 
 
-def fallback_triage(playwright: dict[str, Any], coverage: dict[str, Any]) -> str:
-    fail_lines = [
-        f"- `{f['file']}` / **{f['test']}**: {str(f['error']).splitlines()[0][:180]}"
-        for f in playwright.get("failures", [])[:5]
-    ]
-    miss_lines = [
-        f"- Add targeted unit tests for `{lf['file'].split('/frontend/')[-1]}` ({lf['lines_pct']:.2f}% lines)."
-        for lf in coverage.get("low_files", [])[:8]
-    ]
+# --------- AI triage ---------
 
-    return "\n".join(
-        [
-            "## AI triage (fallback mode)",
-            "",
-            "Anthropic API was unavailable; this triage is deterministic.",
-            "",
-            "### Root causes from failing tests",
-            *(fail_lines or ["- No failing Playwright tests detected."]),
-            "",
-            "### Missing tests likely required",
-            *(miss_lines or ["- No low-coverage files under 50% lines."]),
-            "",
-            "### Suggested correction strategy",
-            "- Fix failing tests first (highest user impact).",
-            "- Add unit tests for low-coverage modules next.",
-            "- Keep Playwright for user journey validation and Vitest for logic branches.",
+def fallback_triage(playwright: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
+    """Deterministic fallback when Anthropic API is unavailable."""
+    failing_tests = []
+    for f in playwright.get("failures", [])[:5]:
+        failing_tests.append({
+            "test_name": f["test"],
+            "functional_impact": f"The test '{f['test']}' failed — users may experience a broken feature or degraded experience.",
+            "qa_action": f"Manually verify the user journey for '{f['test']}' and check if the underlying feature still works.",
+        })
+
+    blind_spots = []
+    for lf in coverage.get("low_files", [])[:8]:
+        short = lf["file"].split("/frontend/")[-1]
+        blind_spots.append(f"Manually verify functionality related to '{short}' (only {lf['lines_pct']:.0f}% line coverage).")
+
+    if not blind_spots:
+        blind_spots = [
+            "Manually verify the complete purchase flow from product selection to checkout.",
+            "Test the site on mobile and tablet viewports for responsive layout issues.",
+            "Verify error handling by submitting forms with invalid data.",
+            "Check accessibility with a screen reader for critical user journeys.",
+            "Test performance under slow network conditions (throttled 3G).",
         ]
-    )
+
+    all_pass = playwright.get("failed", 0) == 0
+
+    return {
+        "summary": (
+            f"All {playwright.get('total', 0)} tests passed successfully. No issues detected."
+            if all_pass
+            else f"{playwright.get('failed', 0)} of {playwright.get('total', 0)} tests failed. "
+            f"Unit coverage is at {coverage.get('lines_pct', 0):.1f}%. AI analysis was unavailable; triage is deterministic."
+        ),
+        "failing_tests": failing_tests,
+        "blind_spots": blind_spots,
+    }
 
 
-def ai_triage(playwright: dict[str, Any], coverage: dict[str, Any]) -> str:
+def ai_triage(playwright: dict[str, Any], coverage: dict[str, Any]) -> dict[str, Any]:
     if not ANTHROPIC_API_KEY or anthropic is None:
         return fallback_triage(playwright, coverage)
 
@@ -268,10 +283,17 @@ def ai_triage(playwright: dict[str, Any], coverage: dict[str, Any]) -> str:
             {
                 "role": "user",
                 "content": (
-                    "You are a QA automation lead for an AI-driven testing PoC. "
-                    "Return markdown with sections: Executive summary, Root causes, "
-                    "Missing tests, Suggested code fixes, and Proposed PR checklist.\n\n"
-                    f"INPUT JSON:\n```json\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n```"
+                    "You are a QA lead analysing test results for a non-technical audience.\n\n"
+                    "Given the test run data below, produce a JSON object with exactly these keys:\n\n"
+                    "- \"summary\": 2-3 plain-English sentences describing overall test health and what it means for the product.\n"
+                    "- \"failing_tests\": an array of objects, one per failing test. Each object has:\n"
+                    "    - \"test_name\": the name of the failing test\n"
+                    "    - \"functional_impact\": one plain-English sentence describing the broken user experience (no code, no jargon)\n"
+                    "    - \"qa_action\": one concrete non-code action a QA person should take (e.g. \"Manually verify the login flow works on Chrome\")\n"
+                    "- \"blind_spots\": an array of 3-5 strings, each describing a functional user journey the test suite does NOT cover, "
+                    "written as what a QA person should manually verify.\n\n"
+                    "Return ONLY the JSON object — no markdown fences, no prose before or after.\n\n"
+                    f"INPUT DATA:\n```json\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n```"
                 ),
             }
         ],
@@ -279,8 +301,29 @@ def ai_triage(playwright: dict[str, Any], coverage: dict[str, Any]) -> str:
 
     text_parts = [c.text for c in msg.content if getattr(c, "type", "") == "text"]
     text = "\n".join(text_parts).strip()
-    return text or fallback_triage(playwright, coverage)
 
+    # Try to parse JSON from the response
+    try:
+        # Strip markdown fences if present
+        cleaned = text
+        if cleaned.startswith("```"):
+            cleaned = re.sub(r"^```(?:json)?\s*\n", "", cleaned)
+            cleaned = re.sub(r"\n```\s*$", "", cleaned)
+        result = json.loads(cleaned)
+        # Validate required keys
+        if all(k in result for k in ("summary", "failing_tests", "blind_spots")):
+            return result
+    except Exception:
+        pass
+
+    # If parsing fails, print raw response and use fallback
+    print(f"AI response could not be parsed as JSON. Raw response:\n{text}")
+    fallback = fallback_triage(playwright, coverage)
+    fallback["ai_raw_response"] = text[:2000]
+    return fallback
+
+
+# --------- HTML helpers ---------
 
 def status_badge(ok: bool, label: str) -> str:
     icon = "✅" if ok else "❌"
@@ -288,284 +331,193 @@ def status_badge(ok: bool, label: str) -> str:
     return f'<span class="badge {klass}">{icon} {html.escape(label)}</span>'
 
 
-def render_bar(pct: float, color: str) -> str:
+def coverage_bar(pct: float) -> str:
     p = max(0.0, min(100.0, float(pct)))
+    if p >= 80:
+        color = "#2ecc71"
+    elif p >= 50:
+        color = "#f39c12"
+    else:
+        color = "#e74c3c"
     return (
         '<div class="bar"><div class="fill" style="width:'
-        f"{p:.2f}%; background:{color};\"></div></div><div class=\"pct\">{p:.2f}%</div>"
+        f'{p:.1f}%; background:{color};"></div></div>'
+        f'<div class="pct">{p:.1f}%</div>'
     )
 
 
-def dashboard_html(summary: dict[str, Any], triage_md: str, pages_url: str = "") -> str:
+# --------- Dashboard HTML ---------
+
+def dashboard_html(summary: dict[str, Any], triage: dict[str, Any]) -> str:
     cov = summary["coverage"]
     pw = summary["playwright"]
 
-    live_line = (
-        f"<div class='k' style='margin-top:8px;'>Live URL</div>"
-        f"<div><a href='{html.escape(pages_url)}'>{html.escape(pages_url)}</a></div>"
-        if pages_url
-        else ""
-    )
-    reports_nav = (
-        "<div class='card' style='margin-bottom:16px;'>"
-        "<h2>Detailed reports</h2>"
-        "<p>"
-        "<a href='playwright-report/index.html'>▶ Playwright report</a> &nbsp;·&nbsp; "
-        "<a href='coverage/index.html'>▶ Coverage report</a> &nbsp;·&nbsp; "
-        "<a href='ai-triage-report.md'>▶ AI triage (markdown)</a> &nbsp;·&nbsp; "
-        "<a href='workflow-summary.json'>▶ Raw summary (JSON)</a>"
-        "</p>"
-        f"{live_line}"
-        "</div>"
-    )
+    all_pass = pw.get("failed", 0) == 0
+    summary_color = "#2ecc71" if all_pass else "#e74c3c"
+    summary_border = "4px solid #2ecc71" if all_pass else "4px solid #e74c3c"
 
-    fail_rows = "\n".join(
-        [
-            "<tr>"
-            f"<td>{html.escape(f['file'])}</td>"
-            f"<td>{html.escape(f['test'])}</td>"
-            f"<td><code>{html.escape(str(f['error']).splitlines()[0][:180])}</code></td>"
-            "</tr>"
-            for f in pw.get("failures", [])[:20]
-        ]
-    )
-    if not fail_rows:
-        fail_rows = '<tr><td colspan="3">No failing tests 🎉</td></tr>'
+    # Suite status cards
+    unit_card = f"""<div class="card">
+        <div class="card-title">Unit Tests (Vitest)</div>
+        <div class="card-badge {'badge-pass' if UNIT_OUTCOME == 'success' else 'badge-fail'}">{'✅ PASS' if UNIT_OUTCOME == 'success' else '❌ FAIL'}</div>
+        <div class="card-detail">{'Passed' if UNIT_OUTCOME == 'success' else 'Some tests failed'}</div>
+        {coverage_bar(cov['lines_pct'])}
+    </div>"""
 
-    low_rows = "\n".join(
-        [
-            "<tr>"
-            f"<td>{html.escape(lf['file'])}</td>"
-            f"<td>{lf['lines_pct']:.2f}%</td>"
-            f"<td>{lf['functions_pct']:.2f}%</td>"
-            f"<td>{lf['branches_pct']:.2f}%</td>"
-            "</tr>"
-            for lf in cov.get("low_files", [])[:20]
-        ]
-    )
-    if not low_rows:
-        low_rows = '<tr><td colspan="4">No files under 50% lines coverage.</td></tr>'
+    e2e_card = f"""<div class="card">
+        <div class="card-title">E2E Tests (Playwright)</div>
+        <div class="card-badge {'badge-pass' if E2E_OUTCOME == 'success' else 'badge-fail'}">{'✅ PASS' if E2E_OUTCOME == 'success' else '❌ FAIL'}</div>
+        <div class="card-detail">{pw['passed']} / {pw['total']} passed</div>
+    </div>"""
+
+    # Failing tests table
+    failing_tests = triage.get("failing_tests", [])
+    if failing_tests:
+        fail_rows = "\n".join(
+            f"""<tr>
+                <td>{html.escape(ft.get('test_name', 'Unknown'))}</td>
+                <td>{html.escape(ft.get('functional_impact', 'No impact description'))}</td>
+                <td>{html.escape(ft.get('qa_action', 'No action specified'))}</td>
+            </tr>"""
+            for ft in failing_tests
+        )
+        failing_section = f"""<h2>Failing Tests — Functional Impact</h2>
+        <table>
+            <thead><tr><th>Test Name</th><th>Functional Impact</th><th>QA Action</th></tr></thead>
+            <tbody>{fail_rows}</tbody>
+        </table>"""
+    else:
+        failing_section = ""
+
+    # Blind spots
+    blind_spots = triage.get("blind_spots", [])
+    blind_items = "\n".join(f"<li>⚠️ {html.escape(bs)}</li>" for bs in blind_spots)
+    blind_section = f"""<div class="blind-spots-card">
+        <h2>Blind Spots — Areas Not Covered by Automated Tests</h2>
+        <ul>{blind_items}</ul>
+        <p class="blind-note"><em>These areas should be verified manually or a new automated test should be requested.</em></p>
+    </div>"""
 
     return f"""<!doctype html>
-<html lang='en'>
+<html lang="en">
 <head>
-  <meta charset='utf-8' />
-  <title>AI Test Workflow Dashboard — {html.escape(JIRA_EPIC_KEY)}</title>
+  <meta charset="utf-8" />
+  <title>QA Test Dashboard — {html.escape(JIRA_EPIC_KEY)}</title>
   <style>
-    body {{ font-family: Inter, Segoe UI, Arial, sans-serif; margin: 24px; color: #0f172a; background: #f8fafc; }}
-    h1, h2 {{ margin: 0 0 12px 0; }}
-    .sub {{ color: #475569; margin-bottom: 20px; }}
-    .grid {{ display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 14px; margin-bottom: 16px; }}
-    .card {{ background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }}
-    .k {{ font-size: 12px; color:#64748b; }}
-    .v {{ font-size: 28px; font-weight: 700; margin-top: 8px; }}
-    .badge {{ display:inline-block; font-size: 12px; padding: 4px 8px; border-radius: 999px; margin-right:8px; }}
-    .ok {{ background:#dcfce7; color:#166534; }} .ko {{ background:#fee2e2; color:#991b1b; }}
-    .bar {{ width: 100%; height: 12px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 6px; }}
-    .fill {{ height: 100%; }} .pct {{ font-size: 12px; color:#334155; margin-top: 6px; }}
-    table {{ width:100%; border-collapse: collapse; background:white; border:1px solid #e2e8f0; border-radius: 12px; overflow:hidden; }}
-    th, td {{ text-align:left; border-bottom:1px solid #e2e8f0; padding: 10px; font-size: 13px; vertical-align: top; }}
-    th {{ background:#f1f5f9; }}
-    pre {{ white-space: pre-wrap; background:#0b1020; color:#e2e8f0; border-radius:10px; padding:12px; font-size:12px; }}
+    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }}
+    .header {{ background: #1a1a2e; color: white; padding: 24px 32px; }}
+    .header h1 {{ font-size: 24px; margin-bottom: 4px; }}
+    .header .subtitle {{ font-size: 14px; color: #a0a0b8; }}
+    .container {{ max-width: 1100px; margin: 0 auto; padding: 24px 16px; }}
+    .summary-banner {{ background: white; border-left: {summary_border}; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; font-size: 15px; line-height: 1.6; color: #333; }}
+    .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }}
+    .card {{ background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
+    .card-title {{ font-size: 13px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }}
+    .card-badge {{ display: inline-block; font-size: 14px; font-weight: 700; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }}
+    .badge-pass {{ background: #d4edda; color: #155724; }}
+    .badge-fail {{ background: #f8d7da; color: #721c24; }}
+    .card-detail {{ font-size: 14px; color: #475569; margin-bottom: 12px; }}
+    .bar {{ width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 6px; }}
+    .fill {{ height: 100%; border-radius: 999px; }}
+    .pct {{ font-size: 12px; color: #475569; margin-top: 4px; }}
+    h2 {{ font-size: 18px; color: #1a1a2e; margin: 24px 0 12px 0; }}
+    table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
+    th, td {{ text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }}
+    th {{ background: #f8fafc; font-weight: 600; color: #475569; }}
+    tr:nth-child(even) td {{ background: #fafbfc; }}
+    .blind-spots-card {{ background: white; border-left: 6px solid #f39c12; border-radius: 8px; padding: 20px 24px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
+    .blind-spots-card ul {{ padding-left: 20px; margin-top: 12px; }}
+    .blind-spots-card li {{ margin-bottom: 8px; line-height: 1.5; font-size: 14px; }}
+    .blind-note {{ margin-top: 16px; color: #64748b; font-size: 13px; }}
+    .footer {{ text-align: center; padding: 24px; color: #94a3b8; font-size: 12px; margin-top: 24px; }}
   </style>
 </head>
 <body>
-  <h1>🧪 AI Test Workflow Dashboard</h1>
-  <div class='sub'>Epic <b>{html.escape(JIRA_EPIC_KEY)}</b> — {html.escape(JIRA_EPIC_TITLE)}<br/>Run: {html.escape(GITHUB_RUN_ID or 'local')} · Commit: {html.escape((GITHUB_SHA or '')[:8])}</div>
-
-  <p>
-    {status_badge(UNIT_OUTCOME == 'success', f'Unit tests: {UNIT_OUTCOME}')}
-    {status_badge(E2E_OUTCOME == 'success', f'E2E tests: {E2E_OUTCOME}')}
-    {status_badge(summary['workflow_ok'], 'Workflow gate')}
-  </p>
-
-  {reports_nav}
-
-  <div class='grid'>
-    <div class='card'><div class='k'>Playwright total</div><div class='v'>{pw['total']}</div></div>
-    <div class='card'><div class='k'>Playwright passed</div><div class='v'>{pw['passed']}</div></div>
-    <div class='card'><div class='k'>Playwright failed</div><div class='v'>{pw['failed']}</div></div>
+  <div class="header">
+    <h1>QA Test Dashboard</h1>
+    <div class="subtitle">Run: {html.escape(RUN_TIMESTAMP)} · Epic: {html.escape(JIRA_EPIC_KEY)}</div>
   </div>
 
-  <div class='card' style='margin-bottom:16px;'>
-    <h2>Coverage snapshot</h2>
-    <div class='k'>Lines</div>{render_bar(cov['lines_pct'], '#2563eb')}
-    <div class='k'>Functions</div>{render_bar(cov['functions_pct'], '#7c3aed')}
-    <div class='k'>Branches</div>{render_bar(cov['branches_pct'], '#16a34a')}
-    <div class='k'>Statements</div>{render_bar(cov['statements_pct'], '#ea580c')}
+  <div class="container">
+    <div class="summary-banner">{html.escape(triage.get('summary', 'No summary available.'))}</div>
+
+    <div class="grid">
+      {unit_card}
+      {e2e_card}
+    </div>
+
+    {failing_section}
+
+    {blind_section}
+
+    <div class="footer">Generated by AI Test Pipeline · Stefgug/fwebsite</div>
   </div>
-
-  <h2>Failing tests</h2>
-  <table>
-    <thead><tr><th>File</th><th>Test</th><th>Error (first line)</th></tr></thead>
-    <tbody>{fail_rows}</tbody>
-  </table>
-
-  <h2 style='margin-top:18px;'>Low-coverage files (&lt;50% lines)</h2>
-  <table>
-    <thead><tr><th>File</th><th>Lines</th><th>Functions</th><th>Branches</th></tr></thead>
-    <tbody>{low_rows}</tbody>
-  </table>
-
-  <h2 style='margin-top:18px;'>AI triage output</h2>
-  <pre>{html.escape(triage_md)}</pre>
 </body>
-</html>
-"""
+</html>"""
 
 
-def write_reports(summary: dict[str, Any], triage_md: str, pages_url: str = "") -> tuple[Path, Path, Path]:
+# --------- Report writing ---------
+
+def write_reports(summary: dict[str, Any], triage: dict[str, Any]) -> tuple[Path, Path, Path]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     summary_path = REPORTS_DIR / "workflow-summary.json"
     report_path = REPORTS_DIR / "ai-triage-report.md"
     dash_path = REPORTS_DIR / "dashboard.html"
 
-    summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    # Store full data including triage in summary
+    full_summary = {**summary, "ai_triage": triage}
+    summary_path.write_text(json.dumps(full_summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    report = "\n".join(
-        [
-            f"# AI Test Workflow Report — {JIRA_EPIC_KEY}",
-            "",
-            f"**Epic:** {JIRA_EPIC_TITLE}",
-            f"**Run:** {GITHUB_RUN_ID or 'local'}",
-            f"**Commit:** {(GITHUB_SHA or '')[:8]}",
-            "",
-            "## Gate status",
-            f"- Unit tests: {UNIT_OUTCOME}",
-            f"- E2E tests: {E2E_OUTCOME}",
-            f"- Coverage lines: {summary['coverage']['lines_pct']:.2f}%",
-            f"- Workflow gate: {'PASS' if summary['workflow_ok'] else 'FAIL'}",
-            "",
-            triage_md.strip(),
-            "",
-        ]
-    )
-    report_path.write_text(report, encoding="utf-8")
-    dash_path.write_text(dashboard_html(summary, triage_md, pages_url), encoding="utf-8")
+    # Build readable markdown report
+    ai_summary = triage.get("summary", "No summary available.")
+    failing = triage.get("failing_tests", [])
+    blind = triage.get("blind_spots", [])
+
+    report_lines = [
+        f"# AI Test Workflow Report — {JIRA_EPIC_KEY}",
+        "",
+        f"**Epic:** {JIRA_EPIC_TITLE}",
+        f"**Run:** {GITHUB_RUN_ID or 'local'}",
+        f"**Commit:** {(GITHUB_SHA or '')[:8]}",
+        "",
+        "## Gate status",
+        f"- Unit tests: {UNIT_OUTCOME}",
+        f"- E2E tests: {E2E_OUTCOME}",
+        f"- Coverage lines: {summary['coverage']['lines_pct']:.2f}%",
+        f"- Workflow gate: {'PASS' if summary['workflow_ok'] else 'FAIL'}",
+        "",
+        "## AI Summary",
+        ai_summary,
+        "",
+    ]
+
+    if failing:
+        report_lines.append("## Failing Tests — Functional Impact")
+        report_lines.append("")
+        for ft in failing:
+            report_lines.append(f"- **{ft.get('test_name', 'Unknown')}**: {ft.get('functional_impact', 'N/A')}")
+            report_lines.append(f"  → QA Action: {ft.get('qa_action', 'N/A')}")
+        report_lines.append("")
+
+    if blind:
+        report_lines.append("## Blind Spots — Areas Not Covered")
+        report_lines.append("")
+        for bs in blind:
+            report_lines.append(f"- ⚠️ {bs}")
+        report_lines.append("")
+        report_lines.append("*These areas should be verified manually or a new automated test should be requested.*")
+        report_lines.append("")
+
+    report_path.write_text("\n".join(report_lines), encoding="utf-8")
+    dash_path.write_text(dashboard_html(summary, triage), encoding="utf-8")
     return summary_path, report_path, dash_path
 
 
-def run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=ROOT, text=True, capture_output=True, check=False)
-
-
-def maybe_create_pr(report_path: Path, summary: dict[str, Any]) -> str | None:
-    if not GH_TOKEN or not GITHUB_REPO:
-        return None
-
-    needs_pr = summary["playwright"]["failed"] > 0 or float(summary["coverage"]["lines_pct"]) < 50.0
-    if not needs_pr:
-        return None
-
-    FIX_NOTES_DIR.mkdir(parents=True, exist_ok=True)
-    sha8 = (GITHUB_SHA or "local")[:8]
-    safe_epic = re.sub(r"[^a-zA-Z0-9-]+", "-", JIRA_EPIC_KEY).lower().strip("-")
-    branch = f"poc/ai-test-triage-{safe_epic}-{sha8}"
-
-    run(["git", "config", "user.email", "ci-bot@shopgeneric.dev"])
-    run(["git", "config", "user.name", "ShopGeneric CI Bot"])
-    if run(["git", "checkout", "-b", branch]).returncode != 0:
-        return None
-
-    note_path = FIX_NOTES_DIR / f"{safe_epic}-{sha8}-ai-test-triage.md"
-    note_path.write_text(report_path.read_text(encoding="utf-8"), encoding="utf-8")
-
-    run(["git", "add", str(note_path)])
-    if run(["git", "commit", "-m", f"test(auto): AI triage for {JIRA_EPIC_KEY} ({sha8})"]).returncode != 0:
-        return None
-
-    remote = f"https://x-access-token:{GH_TOKEN}@github.com/{GITHUB_REPO}.git"
-    if run(["git", "push", remote, branch]).returncode != 0:
-        return None
-
-    res = requests.post(
-        f"https://api.github.com/repos/{GITHUB_REPO}/pulls",
-        headers={"Authorization": f"Bearer {GH_TOKEN}", "Accept": "application/vnd.github+json"},
-        json={
-            "title": f"🧪 AI test triage for {JIRA_EPIC_KEY}",
-            "head": branch,
-            "base": "main",
-            "body": (
-                f"Automated AI triage for epic **{JIRA_EPIC_KEY}**.\n\n"
-                f"- Unit outcome: `{UNIT_OUTCOME}`\n"
-                f"- E2E outcome: `{E2E_OUTCOME}`\n"
-                f"- Coverage lines: `{summary['coverage']['lines_pct']:.2f}%`\n\n"
-                f"See `{note_path.as_posix()}` for details."
-            ),
-        },
-        timeout=20,
-    )
-    if not res.ok:
-        return None
-    return res.json().get("html_url")
-
-
-def compute_pages_url() -> str:
-    if not GITHUB_REPO or "/" not in GITHUB_REPO:
-        return ""
-    owner, repo = GITHUB_REPO.split("/", 1)
-    return f"https://{owner.lower()}.github.io/{repo}/"
-
-
-def _adf_text(text: str, href: str | None = None) -> dict[str, Any]:
-    node: dict[str, Any] = {"type": "text", "text": text}
-    if href:
-        node["marks"] = [{"type": "link", "attrs": {"href": href}}]
-    return node
-
-
-def post_jira_epic_comment(summary: dict[str, Any], pages_url: str, pr_url: str | None) -> bool:
-    if not (JIRA_EMAIL and JIRA_API_TOKEN):
-        return False
-    if not JIRA_EPIC_KEY or JIRA_EPIC_KEY == "UNKNOWN-EPIC":
-        return False
-
-    cov = summary["coverage"]
-    pw = summary["playwright"]
-    gate = "PASS ✅" if summary["workflow_ok"] else "FAIL ❌"
-
-    content: list[dict[str, Any]] = [
-        {"type": "paragraph", "content": [_adf_text(f"🤖 AI test workflow finished — gate: {gate}")]},
-        {
-            "type": "paragraph",
-            "content": [
-                _adf_text(
-                    f"Unit: {UNIT_OUTCOME} · E2E: {E2E_OUTCOME} · "
-                    f"Coverage(lines): {cov['lines_pct']:.2f}% · "
-                    f"Playwright: {pw['passed']}/{pw['total']} passed, {pw['failed']} failed"
-                )
-            ],
-        },
-    ]
-    if pages_url:
-        content.append(
-            {"type": "paragraph", "content": [_adf_text("📊 Live report: "), _adf_text(pages_url, pages_url)]}
-        )
-    if pr_url:
-        content.append(
-            {"type": "paragraph", "content": [_adf_text("🔧 Auto-fix PR: "), _adf_text(pr_url, pr_url)]}
-        )
-
-    try:
-        res = requests.post(
-            f"{JIRA_BASE_URL}/rest/api/3/issue/{JIRA_EPIC_KEY}/comment",
-            auth=(JIRA_EMAIL, JIRA_API_TOKEN),
-            headers={"Accept": "application/json", "Content-Type": "application/json"},
-            json={"body": {"type": "doc", "version": 1, "content": content}},
-            timeout=20,
-        )
-        return res.ok
-    except Exception:
-        return False
-
+# --------- Main ---------
 
 def main() -> None:
     hydrate_epic_from_env_or_event()
-
-    event_name = os.environ.get("GIT_EVENT_NAME", os.environ.get("GITHUB_EVENT_NAME", ""))
-    if event_name == "create" and (not JIRA_EPIC_KEY or JIRA_EPIC_KEY == "UNKNOWN-EPIC"):
-        print("No Jira epic key detected from branch create event; skipping report generation.")
-        return
 
     pw = parse_playwright_results(load_json(PLAYWRIGHT_RESULTS_FILE))
     cov = parse_coverage_summary(load_json(COVERAGE_SUMMARY_FILE))
@@ -573,7 +525,7 @@ def main() -> None:
     workflow_ok = UNIT_OUTCOME == "success" and E2E_OUTCOME == "success" and cov["lines_pct"] >= 50.0
     summary = {
         "epic": {"key": JIRA_EPIC_KEY, "title": JIRA_EPIC_TITLE, "description": JIRA_EPIC_DESCRIPTION},
-        "git": {"repo": GITHUB_REPO, "sha": GITHUB_SHA, "run_id": GITHUB_RUN_ID},
+        "git": {"sha": GITHUB_SHA, "run_id": GITHUB_RUN_ID},
         "unit_outcome": UNIT_OUTCOME,
         "e2e_outcome": E2E_OUTCOME,
         "playwright": pw,
@@ -582,16 +534,7 @@ def main() -> None:
     }
 
     triage = ai_triage(pw, cov)
-    pages_url = compute_pages_url()
-    summary["pages_url"] = pages_url
-    summary_path, report_path, dash_path = write_reports(summary, triage, pages_url)
-
-    pr_url = maybe_create_pr(report_path, summary)
-    if pr_url:
-        summary["auto_pr_url"] = pr_url
-        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    jira_commented = post_jira_epic_comment(summary, pages_url, pr_url)
+    summary_path, report_path, dash_path = write_reports(summary, triage)
 
     gh_step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if gh_step_summary:
@@ -602,11 +545,6 @@ def main() -> None:
             f.write(f"- E2E tests: `{E2E_OUTCOME}`\n")
             f.write(f"- Coverage lines: `{cov['lines_pct']:.2f}%`\n")
             f.write(f"- Workflow gate: **{'PASS ✅' if workflow_ok else 'FAIL ❌'}**\n")
-            if pages_url:
-                f.write(f"- Live report (GitHub Pages): {pages_url}\n")
-            f.write(f"- Jira epic comment posted: {'yes' if jira_commented else 'no'}\n")
-            if pr_url:
-                f.write(f"- Auto PR: {pr_url}\n")
             f.write("\nArtifacts:\n")
             f.write("- `automation-reports/dashboard.html`\n")
             f.write("- `automation-reports/ai-triage-report.md`\n")
@@ -615,8 +553,6 @@ def main() -> None:
     print(f"summary={summary_path}")
     print(f"report={report_path}")
     print(f"dashboard={dash_path}")
-    if pr_url:
-        print(f"auto_pr={pr_url}")
 
 
 if __name__ == "__main__":
