@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Acknowledge
-        run: echo "Running proposed test from issue #${{ github.event.issue.number }}"
+        run: echo "Running proposed test from issue ${{ github.event.issue.number }}"
 
       - name: Checkout
         uses: actions/checkout@v4
