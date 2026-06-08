@@ -9,29 +9,41 @@ PROJECT_KEY    = os.environ.get("JIRA_PROJECT_KEY", "SCRUM")
 auth    = (JIRA_EMAIL, JIRA_API_TOKEN)
 headers = {"Accept": "application/json", "Content-Type": "application/json"}
 
+
 def fetch_all_keys():
-    keys, start = [], 0
+    """Paginate through all issues using nextPageToken (new Jira Cloud cursor API)."""
+    keys = []
+    next_page_token = None
+
     while True:
+        body = {
+            "jql": f"project = {PROJECT_KEY} ORDER BY created ASC",
+            "maxResults": 100,
+            "fields": ["summary"],
+        }
+        if next_page_token:
+            body["nextPageToken"] = next_page_token
+
         r = requests.post(
             f"{JIRA_BASE_URL}/rest/api/3/search/jql",
             auth=auth, headers=headers,
-            json={"jql": f"project = {PROJECT_KEY} ORDER BY created ASC",
-                  "maxResults": 100, "startAt": start,
-                  "fields": ["summary"]},
-            timeout=20,
+            json=body, timeout=20,
         )
         if not r.ok:
             print(f"Search failed ({r.status_code}): {r.text[:300]}")
             sys.exit(1)
-        data  = r.json()
-        batch = data.get("issues", [])
-        keys += [i["key"] for i in batch]
-        start += len(batch)
-        total  = data.get("total", 0)
-        print(f"  Fetched {len(keys)}/{total}...")
-        if start >= total or not batch:
+
+        data   = r.json()
+        batch  = data.get("issues", [])
+        keys  += [i["key"] for i in batch]
+        next_page_token = data.get("nextPageToken")
+        print(f"  Fetched {len(keys)} so far...")
+
+        if not batch or not next_page_token:
             break
+
     return keys
+
 
 def delete_all(keys):
     deleted, failed = 0, []
@@ -51,6 +63,7 @@ def delete_all(keys):
     if failed:
         print(f"Failed: {chr(44).join(failed)}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     print(f"Fetching all issues in {PROJECT_KEY}...")
