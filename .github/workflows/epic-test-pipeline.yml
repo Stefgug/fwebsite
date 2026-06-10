@@ -8,6 +8,11 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  issues: write
+
+concurrency:
+  group: pages-publish
+  cancel-in-progress: false
 
 env:
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -40,6 +45,17 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install anthropic requests pillow
+
+      - name: Ensure issue labels exist
+        run: |
+          for L in run-proposed-test create-jira-ticket; do
+            curl -s -o /dev/null -X POST \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/labels" \
+              -d "{\"name\":\"$L\",\"color\":\"0e8a16\"}" || true
+          done
+          echo "labels ensured"
 
       - name: Create tickets from Epic
         run: python scripts/create-tickets-from-epic.py
@@ -99,11 +115,31 @@ jobs:
           path: automation-reports/
           retention-days: 30
 
+      - name: Assemble Pages site (preserve the other report)
+        if: always()
+        run: |
+          set -e
+          PUB=published
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          rm -rf "$PUB" && mkdir -p "$PUB"
+          if git ls-remote --exit-code --heads "$REPO_URL" reports-store >/dev/null 2>&1; then
+            git clone --depth 1 --branch reports-store "$REPO_URL" "$PUB"
+            rm -rf "$PUB/.git"
+          fi
+          cp -a automation-reports/. "$PUB"/
+          cd "$PUB"
+          git init -q
+          git checkout -q -b reports-store
+          git add -A
+          git -c user.email="actions@github.com" -c user.name="github-actions" \
+            commit -qm "reports: post-run test report run ${{ github.run_id }}" || echo "nothing to commit"
+          git push -f "$REPO_URL" reports-store
+
       - name: Upload pages artifact
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
-          path: automation-reports/
+          path: published/
 
   deploy-pages:
     name: Deploy to GitHub Pages
@@ -112,6 +148,8 @@ jobs:
     permissions:
       pages: write
       id-token: write
+    environment:
+      name: github-pages
 
     steps:
       - name: Deploy to GitHub Pages

@@ -14,6 +14,8 @@ from typing import Any
 
 import requests
 
+import report_common as rc
+
 try:
     import anthropic  # type: ignore
 except Exception:
@@ -863,7 +865,8 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
   </script>
   <header class="header">
     <div class="header-left">
-      <h1>QA Test Dashboard</h1>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:4px;"><a href="index.html" style="color:#9ca3af;text-decoration:none;">← Hub</a></div>
+      <h1>Post-Run Test Report</h1>
       <div class="meta">
         Epic: <a href="{html.escape(JIRA_BASE_URL)}/browse/{html.escape(JIRA_EPIC_KEY)}" target="_blank">{html.escape(JIRA_EPIC_KEY)}</a>
         &nbsp;·&nbsp; {html.escape(RUN_TIMESTAMP)}
@@ -912,10 +915,37 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
     full_summary = {**summary, "ai_triage": triage}
     summary_path.write_text(json.dumps(full_summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # GitHub Pages requires index.html as entry point
-    visual_evidence = build_visual_evidence(summary["playwright"].get("failures", []), triage)
-    index_path = REPORTS_DIR / "index.html"
-    index_path.write_text(dashboard_html(summary, triage, visual_evidence), encoding="utf-8")
+    pw = summary["playwright"]
+    visual_evidence = build_visual_evidence(pw.get("failures", []), triage)
+
+    # The post-run dashboard now lives at test-report.html (index.html is the hub).
+    report_html = dashboard_html(summary, triage, visual_evidence)
+    (REPORTS_DIR / "test-report.html").write_text(report_html, encoding="utf-8")
+
+    # index.html = the GitHub Pages hub linking to every report.
+    (REPORTS_DIR / "index.html").write_text(rc.build_hub_html(), encoding="utf-8")
+
+    # Metadata consumed by the hub (client-side) + the "current epic" marker
+    # used by the anticipatory code-change analysis workflow.
+    generated_at, generated_ts = rc.now_utc()
+    e2e_total = pw.get("total", 0)
+    rc.write_meta(REPORTS_DIR, "test-report.meta.json", {
+        "type": "test-report",
+        "title": "Post-Run Test Report",
+        "href": "test-report.html",
+        "generated_at": generated_at,
+        "generated_ts": generated_ts,
+        "epic_key": JIRA_EPIC_KEY,
+        "epic_title": JIRA_EPIC_TITLE,
+        "gate": "pass" if (pw.get("failed", 0) == 0 and e2e_total > 0 and UNIT_OUTCOME == "success") else "fail",
+        "e2e": f"{pw.get('passed', 0)}/{e2e_total}" if e2e_total else "",
+        "coverage": round(float(summary["coverage"].get("lines_pct", 0.0)), 1),
+    })
+    rc.write_meta(REPORTS_DIR, "current-epic.json", {
+        "epic_key": JIRA_EPIC_KEY,
+        "epic_title": JIRA_EPIC_TITLE,
+        "updated_at": generated_at,
+    })
 
     # Test catalog page
     (REPORTS_DIR / "proposed-tests.json").write_text(
@@ -926,7 +956,7 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
         ),
         encoding="utf-8",
     )
-    catalog_html = generate_catalog_html(summary["playwright"], triage, jira_bug_links, proposals)
+    catalog_html = generate_catalog_html(pw, triage, jira_bug_links, proposals)
     catalog_path = REPORTS_DIR / "catalog.html"
     catalog_path.write_text(catalog_html, encoding="utf-8")
     print(f"  ✅ catalog.html written ({len(catalog_html):,} bytes)")
@@ -972,7 +1002,7 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
         report_lines.append("")
 
     report_path.write_text("\n".join(report_lines), encoding="utf-8")
-    dash_path.write_text(dashboard_html(summary, triage, visual_evidence), encoding="utf-8")
+    dash_path.write_text(report_html, encoding="utf-8")
     return summary_path, report_path, dash_path
 
 
@@ -1400,7 +1430,15 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
             </div>
         </div>"""
 
-    proposals_html = proposals_section_html(proposals or [])
+    for _p in (proposals or []):
+        _p.setdefault("jira_epic_key", JIRA_EPIC_KEY)
+        _p.setdefault("source", "post-run")
+    proposals_html = rc.proposals_section_html(
+        proposals or [],
+        intro=("Claude analysed the failures and coverage gaps, then proposed the improvements below — "
+               "each verified against the existing suite. Use <strong>Run on a branch</strong> to validate "
+               "the test, or <strong>Create Jira ticket</strong> to track it in the Epic."),
+    )
 
     catalog_html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1466,7 +1504,7 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
 <body>
     <header class="header">
         <div class="header-left">
-            <div class="breadcrumb"><a href="index.html">← Dashboard</a></div>
+            <div class="breadcrumb"><a href="index.html">← Hub</a> &nbsp;·&nbsp; <a href="test-report.html">Test Report</a></div>
             <h1>Test Catalog</h1>
             <div class="meta">
                 Epic: <a href="{html.escape(JIRA_BASE_URL)}/browse/{html.escape(JIRA_EPIC_KEY)}" target="_blank">{html.escape(JIRA_EPIC_KEY)}</a>
@@ -1621,94 +1659,6 @@ EXISTING TEST SUITE (full source - use for dedup and exact-match anchors):
         clean.append(p)
     print(f"  generated {len(clean)} test proposal(s)")
     return clean
-
-
-def _proposal_issue_url(p: dict[str, Any]) -> str:
-    from urllib.parse import quote_plus
-    payload = {
-        "id": p.get("id"),
-        "kind": p.get("kind"),
-        "target_file": p.get("target_file"),
-        "test_name": p.get("test_name"),
-        "existing_code": p.get("existing_code", ""),
-        "proposed_code": p.get("proposed_code", ""),
-    }
-    body = (
-        f"**AI-proposed test {'modification' if p.get('kind') == 'modify_test' else '(new)'}**\n\n"
-        f"**Rationale:** {p.get('rationale', '')}\n\n"
-        f"**Coverage check:** {p.get('coverage_check', '')}\n\n"
-        "Approving this issue (it already carries the `run-proposed-test` label) will apply the change "
-        "and run the test once. Nothing is committed automatically.\n\n"
-        f"```json\n{json.dumps(payload, ensure_ascii=False)}\n```\n"
-    )
-    title = f"[QA Proposal] {p.get('title', 'test improvement')}"
-    return (
-        "https://github.com/Stefgug/fwebsite/issues/new"
-        f"?title={quote_plus(title)}"
-        f"&labels={quote_plus('run-proposed-test')}"
-        f"&body={quote_plus(body)}"
-    )
-
-
-def proposals_section_html(proposals: list[dict[str, Any]]) -> str:
-    if not proposals:
-        return ""
-    cards = ""
-    for p in proposals:
-        kind = p.get("kind")
-        if kind == "modify_test":
-            badge = ('<span style="background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;'
-                     'padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">Modify existing test</span>')
-        else:
-            badge = ('<span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;'
-                     'padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">New test</span>')
-        url = _proposal_issue_url(p)
-        existing = html.escape(p.get("existing_code", "") or "")
-        proposed = html.escape(p.get("proposed_code", "") or "")
-        if kind == "modify_test" and existing:
-            diff_block = f"""
-            <details style="margin-top:12px;">
-              <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View change ↕</summary>
-              <div style="margin-top:10px;">
-                <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Current</div>
-                <pre style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>{existing}</code></pre>
-                <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;">Proposed</div>
-                <pre style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>{proposed}</code></pre>
-              </div>
-            </details>"""
-        else:
-            diff_block = f"""
-            <details style="margin-top:12px;">
-              <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View proposed test code ↕</summary>
-              <pre style="margin-top:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>{proposed}</code></pre>
-            </details>"""
-        cards += f"""
-        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
-            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
-                {badge}
-                <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">{html.escape(p.get('title', ''))}</h3>
-                <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">{html.escape(p.get('target_file', ''))}</code>
-            </div>
-            <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">{html.escape(p.get('rationale', ''))}</p>
-            <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
-                <strong style="color:#6b7280;">Coverage check:</strong> {html.escape(p.get('coverage_check', ''))}
-            </p>
-            {diff_block}
-            <div style="margin-top:14px;">
-                <a href="{url}" target="_blank"
-                   style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
-                          padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
-                    Accept &amp; run this test →
-                </a>
-            </div>
-        </div>"""
-
-    return f"""
-        <div style="color:#6b7280;font-size:13px;margin-bottom:16px;line-height:1.55;">
-            Claude analysed failures and coverage gaps, then proposed the improvements below — each verified against the existing suite to avoid duplication.
-            Click <strong>Accept &amp; run</strong> to apply the change and validate it in a one-off run. Nothing is committed automatically.
-        </div>
-        {cards}"""
 
 
 # --------- Main ---------
