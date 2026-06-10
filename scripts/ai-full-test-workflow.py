@@ -342,17 +342,25 @@ def status_badge(ok: bool, label: str) -> str:
 
 
 def coverage_bar(pct: float) -> str:
+    """Render a progress bar for a coverage percentage."""
     p = max(0.0, min(100.0, float(pct)))
     if p >= 80:
-        color = "#2ecc71"
+        track_color = "#bbf7d0"
+        fill_color  = "#16a34a"
+        label_color = "#15803d"
     elif p >= 50:
-        color = "#f39c12"
+        track_color = "#fef9c3"
+        fill_color  = "#ca8a04"
+        label_color = "#a16207"
     else:
-        color = "#e74c3c"
+        track_color = "#fee2e2"
+        fill_color  = "#dc2626"
+        label_color = "#b91c1c"
     return (
-        '<div class="bar"><div class="fill" style="width:'
-        f'{p:.1f}%; background:{color};"></div></div>'
-        f'<div class="pct">{p:.1f}%</div>'
+        f'<div style="width:100%;height:6px;background:{track_color};border-radius:99px;overflow:hidden;margin-top:10px;">'
+        f'<div style="width:{p:.1f}%;height:100%;background:{fill_color};border-radius:99px;transition:width .4s;"></div>'
+        f'</div>'
+        f'<div style="font-size:12px;color:{label_color};font-weight:600;margin-top:5px;">{p:.1f}% line coverage</div>'
     )
 
 
@@ -483,129 +491,331 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
     cov = summary["coverage"]
     pw = summary["playwright"]
 
-    all_pass = pw.get("failed", 0) == 0
-    summary_color = "#2ecc71" if all_pass else "#e74c3c"
-    summary_border = "4px solid #2ecc71" if all_pass else "4px solid #e74c3c"
+    all_pass = pw.get("failed", 0) == 0 and pw.get("total", 0) > 0
+    e2e_total  = pw.get("total",  0)
+    e2e_passed = pw.get("passed", 0)
+    e2e_failed = pw.get("failed", 0)
 
-    # Suite status cards
+    # ── Unit test card ──────────────────────────────────────────────────
+    unit_ok = (UNIT_OUTCOME == "success")
+    if unit_ok:
+        unit_status_html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0;"></span><span style="font-size:14px;font-weight:600;color:#15803d;">All tests passed</span></div>'
+    else:
+        unit_status_html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="width:8px;height:8px;border-radius:50%;background:#dc2626;flex-shrink:0;"></span><span style="font-size:14px;font-weight:600;color:#b91c1c;">Tests failed</span></div>'
+
     unit_card = f"""<div class="card">
-        <div class="card-title">Unit Tests (Vitest)</div>
-        <div class="card-badge {'badge-pass' if UNIT_OUTCOME == 'success' else 'badge-fail'}">{'✅ PASS' if UNIT_OUTCOME == 'success' else '❌ FAIL'}</div>
-        <div class="card-detail">{'Passed' if UNIT_OUTCOME == 'success' else 'Some tests failed'}</div>
-        {coverage_bar(cov['lines_pct'])}
+      <div class="card-label">Unit Tests <span class="runner-chip">Vitest</span></div>
+      {unit_status_html}
+      {coverage_bar(cov['lines_pct'])}
     </div>"""
 
-    e2e_pass = pw.get('failed', 0) == 0 and pw.get('total', 0) > 0
-    e2e_detail = f"{pw['passed']} / {pw['total']} passed" + ('' if pw.get('failed', 0) == 0 else f", {pw.get('failed', 0)} failed")
+    # ── E2E card — show numeric split ──────────────────────────────────
+    if e2e_total == 0:
+        e2e_inner = '<div style="color:#6b7280;font-size:14px;margin-top:8px;">No results recorded</div>'
+    else:
+        pass_pct = (e2e_passed / e2e_total * 100) if e2e_total else 0
+        p_bg = "#f0fdf4"; p_num_col = "#15803d"; p_lbl_col = "#16a34a"
+        f_bg = "#fff"     if e2e_failed == 0 else "#fef2f2"
+        f_num_col = "#9ca3af" if e2e_failed == 0 else "#b91c1c"
+        f_lbl_col = "#9ca3af" if e2e_failed == 0 else "#dc2626"
+        e2e_inner = f"""
+        <div style="display:flex;gap:12px;margin-top:12px;">
+          <div style="flex:1;background:{p_bg};border-radius:8px;padding:12px 16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:{p_num_col};line-height:1;">{e2e_passed}</div>
+            <div style="font-size:12px;font-weight:500;color:{p_lbl_col};margin-top:4px;letter-spacing:.5px;">PASSED</div>
+          </div>
+          <div style="flex:1;background:{f_bg};border:1px solid {'#fecaca' if e2e_failed > 0 else '#e5e7eb'};border-radius:8px;padding:12px 16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:{f_num_col};line-height:1;">{e2e_failed}</div>
+            <div style="font-size:12px;font-weight:500;color:{f_lbl_col};margin-top:4px;letter-spacing:.5px;">FAILED</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:10px;">{e2e_total} tests total · {pass_pct:.0f}% passing</div>"""
     e2e_card = f"""<div class="card">
-        <div class="card-title">E2E Tests (Playwright)</div>
-        <div class="card-badge {'badge-pass' if e2e_pass else 'badge-fail'}">{'✅ PASS' if e2e_pass else '❌ FAIL'}</div>
-        <div class="card-detail">{e2e_detail}</div>
+      <div class="card-label">E2E Tests <span class="runner-chip">Playwright</span></div>
+      {e2e_inner}
     </div>"""
 
-    # Failing tests table
+    # ── Failing tests table ────────────────────────────────────────────
     failing_tests = triage.get("failing_tests", [])
     if failing_tests:
         fail_rows = "\n".join(
             f"""<tr>
-                <td>{html.escape(ft.get('test_name', 'Unknown'))}</td>
+                <td class="td-name">{html.escape(ft.get('test_name', 'Unknown'))}</td>
                 <td>{html.escape(ft.get('functional_impact', 'No impact description'))}</td>
                 <td>{html.escape(ft.get('qa_action', 'No action specified'))}</td>
             </tr>"""
             for ft in failing_tests
         )
-        failing_section = f"""<h2>Failing Tests — Functional Impact</h2>
+        failing_section = f"""<div class="section-header"><h2>Failing Tests — Functional Impact</h2></div>
         <table>
-            <thead><tr><th>Test Name</th><th>Functional Impact</th><th>QA Action</th></tr></thead>
+            <thead><tr><th>Test</th><th>What broke for users</th><th>Suggested QA action</th></tr></thead>
             <tbody>{fail_rows}</tbody>
         </table>"""
     else:
         failing_section = ""
 
-    # Blind spots
+    # ── Blind spots ────────────────────────────────────────────────────
     blind_spots = triage.get("blind_spots", [])
-    blind_items = "\n".join(f"<li>⚠️ {html.escape(bs)}</li>" for bs in blind_spots)
-    blind_section = f"""<div class="blind-spots-card">
-        <h2>Blind Spots — Areas Not Covered by Automated Tests</h2>
-        <ul>{blind_items}</ul>
-        <p class="blind-note"><em>These areas should be verified manually or a new automated test should be requested.</em></p>
+    blind_items = "\n".join(
+        f'<li><span style="color:#d97706;font-size:13px;margin-right:6px;">⚠</span>{html.escape(bs)}</li>'
+        for bs in blind_spots
+    )
+    blind_section = f"""<div class="blind-card">
+        <div class="blind-card-header">
+          <span style="font-size:16px;">🔍</span>
+          <h2 style="margin:0;">Coverage Gaps</h2>
+          <span style="font-size:13px;color:#92400e;font-weight:500;">Areas not covered by automated tests</span>
+        </div>
+        <ul class="blind-list">{blind_items}</ul>
+        <p class="blind-note">These journeys should be verified manually or a new test should be requested via the catalog.</p>
     </div>"""
 
+    # ── Visual evidence ────────────────────────────────────────────────
     visual_evidence = visual_evidence or {}
     if visual_evidence:
         ev_cards = ""
         for _tname, _ev in visual_evidence.items():
             _label = html.escape(_ev.get("label", "") or "")
-            _label_html = f'<div style="color:#e74c3c;font-size:13px;font-weight:600;margin-bottom:6px;">&#9656; {_label}</div>' if _label else ""
-            ev_cards += f"""<div class="card" style="grid-column:1/-1;">
-                <div class="card-title">{html.escape(_tname)}</div>
+            _label_html = (
+                f'<div style="display:inline-flex;align-items:center;gap:6px;background:#fef2f2;'
+                f'border:1px solid #fecaca;border-radius:6px;padding:4px 10px;font-size:12px;'
+                f'font-weight:600;color:#b91c1c;margin-bottom:10px;">🎯 {_label}</div>'
+            ) if _label else ""
+            ev_cards += f"""<div class="ev-card">
+                <div class="card-label" style="margin-bottom:8px;">{html.escape(_tname)}</div>
                 {_label_html}
-                <img src="{html.escape(_ev.get('image', ''))}" alt="Screenshot of {html.escape(_tname)}" style="width:100%;border-radius:8px;border:1px solid #e2e8f0;margin-top:6px;" />
+                <img src="{html.escape(_ev.get('image', ''))}"
+                     alt="Screenshot of {html.escape(_tname)}"
+                     style="width:100%;border-radius:8px;border:1px solid #e5e7eb;" />
             </div>"""
-        visual_section = f"""<h2>Visual Evidence - What the tester would see</h2>
-        <p style="color:#64748b;font-size:13px;margin-bottom:12px;">Screenshots captured automatically the moment each test failed. The red box highlights the area linked to the problem.</p>
-        <div class="grid">{ev_cards}</div>"""
+        visual_section = f"""<div class="section-header"><h2>Visual Evidence</h2>
+        <span style="font-size:13px;color:#6b7280;">Screenshots taken at the moment each test failed · red box marks the problem area</span></div>
+        <div class="ev-grid">{ev_cards}</div>"""
     else:
         visual_section = ""
+
+    # ── Gate summary banner ────────────────────────────────────────────
+    if all_pass:
+        banner_icon  = "✓"
+        banner_bg    = "#f0fdf4"
+        banner_border= "#86efac"
+        banner_icon_col = "#16a34a"
+    else:
+        banner_icon  = "✕"
+        banner_bg    = "#fff7f7"
+        banner_border= "#fca5a5"
+        banner_icon_col = "#dc2626"
 
     return f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>QA Test Dashboard — {html.escape(JIRA_EPIC_KEY)}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QA Dashboard — {html.escape(JIRA_EPIC_KEY)}</title>
   <style>
-    * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #1a1a2e; }}
-    .header {{ background: #1a1a2e; color: white; padding: 24px 32px; }}
-    .header h1 {{ font-size: 24px; margin-bottom: 4px; }}
-    .header .subtitle {{ font-size: 14px; color: #a0a0b8; }}
-    .container {{ max-width: 1100px; margin: 0 auto; padding: 24px 16px; }}
-    .summary-banner {{ background: white; border-left: {summary_border}; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; font-size: 15px; line-height: 1.6; color: #333; }}
-    .grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; margin-bottom: 24px; }}
-    .card {{ background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
-    .card-title {{ font-size: 13px; color: #64748b; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }}
-    .card-badge {{ display: inline-block; font-size: 14px; font-weight: 700; padding: 6px 14px; border-radius: 6px; margin-bottom: 8px; }}
-    .badge-pass {{ background: #d4edda; color: #155724; }}
-    .badge-fail {{ background: #f8d7da; color: #721c24; }}
-    .card-detail {{ font-size: 14px; color: #475569; margin-bottom: 12px; }}
-    .bar {{ width: 100%; height: 10px; background: #e2e8f0; border-radius: 999px; overflow: hidden; margin-top: 6px; }}
-    .fill {{ height: 100%; border-radius: 999px; }}
-    .pct {{ font-size: 12px; color: #475569; margin-top: 4px; }}
-    h2 {{ font-size: 18px; color: #1a1a2e; margin: 24px 0 12px 0; }}
-    table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
-    th, td {{ text-align: left; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }}
-    th {{ background: #f8fafc; font-weight: 600; color: #475569; }}
-    tr:nth-child(even) td {{ background: #fafbfc; }}
-    .blind-spots-card {{ background: white; border-left: 6px solid #f39c12; border-radius: 8px; padding: 20px 24px; margin-top: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }}
-    .blind-spots-card ul {{ padding-left: 20px; margin-top: 12px; }}
-    .blind-spots-card li {{ margin-bottom: 8px; line-height: 1.5; font-size: 14px; }}
-    .blind-note {{ margin-top: 16px; color: #64748b; font-size: 13px; }}
-    .footer {{ text-align: center; padding: 24px; color: #94a3b8; font-size: 12px; margin-top: 24px; }}
+    *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+    body {{
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #f8fafc;
+      color: #111827;
+      font-size: 14px;
+      line-height: 1.5;
+    }}
+    /* ── Header ── */
+    .header {{
+      background: #111827;
+      padding: 20px 32px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }}
+    .header-left h1 {{ font-size: 20px; font-weight: 700; color: #f9fafb; }}
+    .header-left .meta {{
+      font-size: 12px; color: #6b7280; margin-top: 3px;
+    }}
+    .header-left .meta a {{ color: #93c5fd; text-decoration: none; }}
+    .header-left .meta a:hover {{ text-decoration: underline; }}
+    .header-nav a {{
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1f2937; color: #d1d5db;
+      border: 1px solid #374151;
+      padding: 7px 14px; border-radius: 6px;
+      text-decoration: none; font-size: 13px; font-weight: 500;
+      transition: background .15s;
+    }}
+    .header-nav a:hover {{ background: #374151; color: #f9fafb; }}
+    /* ── Layout ── */
+    .container {{ max-width: 1080px; margin: 0 auto; padding: 28px 20px 48px; }}
+    /* ── Summary banner ── */
+    .summary-banner {{
+      background: {banner_bg};
+      border: 1px solid {banner_border};
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }}
+    .banner-icon {{
+      width: 28px; height: 28px; flex-shrink: 0;
+      border-radius: 50%;
+      background: {banner_icon_col};
+      color: #fff; font-weight: 700; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }}
+    .summary-banner p {{ font-size: 14px; color: #374151; line-height: 1.65; }}
+    /* ── Cards grid ── */
+    .cards-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }}
+    .card {{
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px 22px;
+    }}
+    .card-label {{
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+    .runner-chip {{
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }}
+    /* ── Section headers ── */
+    .section-header {{
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 32px 0 14px;
+      flex-wrap: wrap;
+    }}
+    .section-header h2 {{
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }}
+    /* ── Failing tests table ── */
+    .table-wrap {{
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+    }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{
+      text-align: left;
+      padding: 11px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }}
+    th {{ background: #f9fafb; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }}
+    tr:last-child td {{ border-bottom: none; }}
+    td.td-name {{ font-weight: 500; white-space: nowrap; }}
+    /* ── Blind spots ── */
+    .blind-card {{
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-top: 24px;
+    }}
+    .blind-card-header {{
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #f3f4f6;
+    }}
+    .blind-card-header h2 {{ font-size: 16px; font-weight: 700; color: #111827; }}
+    .blind-list {{ list-style: none; padding: 0; }}
+    .blind-list li {{
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.55;
+      border-bottom: 1px solid #f9fafb;
+    }}
+    .blind-list li:last-child {{ border-bottom: none; }}
+    .blind-note {{ margin-top: 14px; font-size: 12px; color: #9ca3af; font-style: italic; }}
+    /* ── Visual evidence ── */
+    .ev-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }}
+    .ev-card {{
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px 20px;
+    }}
+    /* ── Footer ── */
+    .footer {{
+      text-align: center;
+      padding: 24px;
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 32px;
+      border-top: 1px solid #e5e7eb;
+    }}
   </style>
 </head>
 <body>
-  <div class="header">
-    <h1>QA Test Dashboard</h1>
-    <div class="subtitle">Run: {html.escape(RUN_TIMESTAMP)} · Epic: <a href="{html.escape(JIRA_BASE_URL)}/browse/{html.escape(JIRA_EPIC_KEY)}" target="_blank" style="color:#7aa2f7;">{html.escape(JIRA_EPIC_KEY)}</a></div>
-  </div>
+  <header class="header">
+    <div class="header-left">
+      <h1>QA Test Dashboard</h1>
+      <div class="meta">
+        Epic: <a href="{html.escape(JIRA_BASE_URL)}/browse/{html.escape(JIRA_EPIC_KEY)}" target="_blank">{html.escape(JIRA_EPIC_KEY)}</a>
+        &nbsp;·&nbsp; {html.escape(RUN_TIMESTAMP)}
+      </div>
+    </div>
+    <nav class="header-nav">
+      <a href="catalog.html">📋 Test Catalog</a>
+    </nav>
+  </header>
 
   <div class="container">
-    <div class="summary-banner">{html.escape(triage.get('summary', 'No summary available.'))}</div>
 
-    <div class="grid">
+    <div class="summary-banner">
+      <div class="banner-icon">{banner_icon}</div>
+      <p>{html.escape(triage.get('summary', 'No summary available.'))}</p>
+    </div>
+
+    <div class="cards-grid">
       {unit_card}
       {e2e_card}
     </div>
 
-    {failing_section}
+    {'<div class="table-wrap">' + failing_section + '</div>' if failing_section else ''}
 
     {visual_section}
 
     {blind_section}
-
-    <div style="text-align:center;margin-top:24px;">
-      <a href="catalog.html" style="display:inline-block;padding:10px 22px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px;">📋 View Test Catalog</a>
-    </div>
 
     <div class="footer">Generated by AI Test Pipeline · Stefgug/fwebsite</div>
   </div>
@@ -939,8 +1149,6 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
 
     e2e_ran = pw_results.get("total", 0) > 0
 
-    proposals_html = proposals_section_html(proposals or [])
-
     # Build area cards HTML
     area_cards_html = ""
     total_tests = 0
@@ -956,29 +1164,38 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
 
         total_tests += len(test_names)
 
-        rows_html = ""
-        for test_name in test_names:
-            if test_name in failed_tests:
-                status_badge = '<span style="background:#e74c3c;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">❌ Fail</span>'
+        # Split tests into failed vs passed
+        failed_in_area  = [t for t in test_names if t in failed_tests]
+        passed_in_area  = [t for t in test_names if t not in failed_tests]
+        n_failed = len(failed_in_area)
+        n_passed = len(passed_in_area)
+
+        def _make_row(test_name: str, is_failed: bool) -> str:
+            if is_failed:
+                s_badge = ('<span style="display:inline-flex;align-items:center;gap:5px;'
+                           'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;'
+                           'padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✕ Failed</span>')
             elif e2e_ran:
-                status_badge = '<span style="background:#2ecc71;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">✅ Pass</span>'
+                s_badge = ('<span style="display:inline-flex;align-items:center;gap:5px;'
+                           'background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;'
+                           'padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span>')
             else:
-                status_badge = '<span style="background:#888;color:#fff;padding:2px 8px;border-radius:4px;font-size:12px;">⚪ Unknown</span>'
+                s_badge = ('<span style="background:#f3f4f6;color:#6b7280;'
+                           'padding:3px 9px;border-radius:5px;font-size:12px;">— Unknown</span>')
 
             display_name = test_name[0].upper() + test_name[1:] if test_name else test_name
 
-            # Action button: Jira bug link for failed tests (if created), else GitHub fallback
-            if test_name in failed_tests and jira_bug_links and test_name in jira_bug_links:
+            if is_failed and jira_bug_links and test_name in jira_bug_links:
                 jira_info = jira_bug_links[test_name]
                 action_cell = (
                     f'<a href="{jira_info["url"]}" target="_blank" '
-                    f'style="background:#e74c3c;color:#fff;padding:3px 10px;border-radius:4px;'
+                    f'style="display:inline-flex;align-items:center;gap:5px;'
+                    f'background:#b91c1c;color:#fff;padding:4px 10px;border-radius:5px;'
                     f'font-size:12px;text-decoration:none;font-weight:600;">🐛 {jira_info["key"]}</a>'
                 )
             else:
                 encoded_name = quote_plus(test_name)
-                encoded_area = quote_plus(area_name)
-                if test_name in failed_tests and test_name in triage_by_test:
+                if is_failed and test_name in triage_by_test:
                     ti = triage_by_test[test_name]
                     issue_body = (
                         f"**Area:** {area_name}\n"
@@ -988,101 +1205,223 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
                         f"---\n*Auto-generated from the AI test pipeline report.*"
                     )
                 else:
-                    issue_body = (
-                        f"Area: {area_name}\nTest: {test_name}\n\nDescribe the issue or improvement needed:"
-                    )
+                    issue_body = f"Area: {area_name}\nTest: {test_name}\n\nDescribe the issue or improvement needed:"
                 flag_url = (
                     f"https://github.com/Stefgug/fwebsite/issues/new"
                     f"?title=Test+flag:+{encoded_name}"
                     f"&body={quote_plus(issue_body)}"
                 )
-                link_style = (
-                    "color:#e67e22;font-size:12px;text-decoration:none;"
-                    if test_name in failed_tests
-                    else "color:#94a3b8;font-size:12px;text-decoration:none;"
-                )
-                link_label = "🚩 Report issue" if test_name in failed_tests else "🚩 Flag"
-                action_cell = f'<a href="{flag_url}" target="_blank" style="{link_style}">{link_label}</a>'
+                if is_failed:
+                    action_cell = (
+                        f'<a href="{flag_url}" target="_blank" '
+                        f'style="color:#dc2626;font-size:12px;text-decoration:none;font-weight:500;">🚩 Report issue</a>'
+                    )
+                else:
+                    action_cell = (
+                        f'<a href="{flag_url}" target="_blank" '
+                        f'style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a>'
+                    )
 
-            rows_html += f"""
-                <tr style="border-bottom:1px solid #e0e0e0;">
-                    <td style="padding:10px 12px;white-space:nowrap;">{status_badge}</td>
-                    <td style="padding:10px 12px;color:#2d3748;">{display_name}</td>
-                    <td style="padding:10px 12px;white-space:nowrap;">{action_cell}</td>
-                </tr>"""
+            return (
+                f'<tr>'
+                f'<td style="padding:10px 14px;white-space:nowrap;">{s_badge}</td>'
+                f'<td style="padding:10px 14px;color:#1f2937;font-size:13px;">{html.escape(display_name)}</td>'
+                f'<td style="padding:10px 14px;white-space:nowrap;">{action_cell}</td>'
+                f'</tr>'
+            )
+
+        # Failed rows always shown
+        failed_rows_html = "".join(_make_row(t, True)  for t in failed_in_area)
+        passed_rows_html = "".join(_make_row(t, False) for t in passed_in_area)
 
         if not test_names:
-            rows_html = '<tr><td colspan="3" style="padding:12px;color:#888;font-style:italic;">No tests parsed from spec file.</td></tr>'
+            table_body = '<tr><td colspan="3" style="padding:14px;color:#9ca3af;font-style:italic;">No tests parsed from spec file.</td></tr>'
+            toggle_html = ""
+        else:
+            area_id = re.sub(r"[^a-z0-9]", "-", area_name.lower())
 
-        count_badge = f'<span style="background:#3b82f6;color:#fff;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;">{len(test_names)} tests</span>'
+            # Failed rows + conditional passed-rows collapse
+            passed_toggle_html = ""
+            if passed_in_area:
+                passed_toggle_html = (
+                    f'<tr class="passed-toggle-row" data-area="{area_id}">'
+                    f'<td colspan="3" style="padding:10px 14px;">'
+                    f'<button onclick="togglePassed(\'{area_id}\')" '
+                    f'style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;'
+                    f'display:flex;align-items:center;gap:6px;padding:0;" id="btn-{area_id}">'
+                    f'<span id="arrow-{area_id}" style="transition:transform .2s;">▶</span>'
+                    f'Show {n_passed} passed test{"s" if n_passed != 1 else ""}'
+                    f'</button>'
+                    f'</td></tr>'
+                    + "".join(
+                        f'<tr class="passed-row-{area_id}" style="display:none;">'
+                        f'<td style="padding:10px 14px;white-space:nowrap;">'
+                        + (_make_row(t, False).split("<td style", 1)[1].split("</td>", 1)[0].replace("style=", "<td style=", 1) if False else "")
+                        + f'</tr>'
+                        for t in passed_in_area
+                    )
+                )
+                # simpler: generate each passed row directly
+                passed_toggle_html = (
+                    f'<tr data-area="{area_id}">'
+                    f'<td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;">'
+                    f'<button onclick="togglePassed(\'{area_id}\')" '
+                    f'id="btn-{area_id}" '
+                    f'style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;'
+                    f'display:inline-flex;align-items:center;gap:6px;padding:0;">'
+                    f'<span id="arrow-{area_id}" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>'
+                    f'&nbsp;Show {n_passed} passed test{"s" if n_passed != 1 else ""}'
+                    f'</button>'
+                    f'</td></tr>'
+                )
+                passed_rows_section = "".join(
+                    f'<tr class="passed-row-{area_id}" style="display:none;">{_make_row(t, False)[4:]}'
+                    for t in passed_in_area
+                )
+            else:
+                passed_toggle_html = ""
+                passed_rows_section = ""
+
+            table_body = failed_rows_html + passed_toggle_html + passed_rows_section
+            toggle_html = ""  # JS is in the page <script>
+
+        # Area header meta
+        area_pills = ""
+        if n_failed:
+            area_pills += (f'<span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;'
+                           f'padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">'
+                           f'{n_failed} failing</span> ')
+        area_pills += (f'<span style="background:#f3f4f6;color:#374151;'
+                       f'padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">'
+                       f'{len(test_names)} tests</span>')
 
         area_cards_html += f"""
-        <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:28px;overflow:hidden;border-left:5px solid #3b82f6;">
-            <div style="padding:18px 22px 10px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
-                <h2 style="margin:0;font-size:20px;color:#1a1a2e;flex:1;">{area_name}</h2>
-                {count_badge}
-                <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/{spec_file}" target="_blank" style="font-size:12px;color:#6b7280;text-decoration:none;white-space:nowrap;">📂 View on GitHub</a>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">{html.escape(area_name)}</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">{html.escape(description)}</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    {area_pills}
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/{spec_file}"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
             </div>
-            <div style="padding:0 22px 12px 22px;color:#718096;font-size:14px;">{description}</div>
             <div style="overflow-x:auto;">
-                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                <table style="width:100%;border-collapse:collapse;">
                     <thead>
-                        <tr style="background:#f7f8fa;border-bottom:2px solid #e0e0e0;">
-                            <th style="padding:10px 12px;text-align:left;color:#4a5568;font-weight:600;width:110px;">Status</th>
-                            <th style="padding:10px 12px;text-align:left;color:#4a5568;font-weight:600;">Test Name</th>
-                            <th style="padding:10px 12px;text-align:left;color:#4a5568;font-weight:600;width:120px;">Flag</th>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
                         </tr>
                     </thead>
-                    <tbody>{rows_html}
-                    </tbody>
+                    <tbody>{table_body}</tbody>
                 </table>
             </div>
         </div>"""
 
-    html = f"""<!DOCTYPE html>
+    proposals_html = proposals_section_html(proposals or [])
+
+    catalog_html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Catalog — {JIRA_EPIC_KEY}</title>
+    <title>Test Catalog — {html.escape(JIRA_EPIC_KEY)}</title>
     <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #2d3748; }}
-        a {{ color: #3b82f6; }}
+        *, *::before, *::after {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+          background: #f8fafc;
+          color: #111827;
+          font-size: 14px;
+          line-height: 1.5;
+        }}
+        a {{ color: #2563eb; }}
+        .header {{
+          background: #111827;
+          padding: 18px 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+        }}
+        .header-left .breadcrumb {{ font-size:12px;color:#6b7280;margin-bottom:4px; }}
+        .header-left .breadcrumb a {{ color:#9ca3af;text-decoration:none; }}
+        .header-left .breadcrumb a:hover {{ color:#d1d5db; }}
+        .header-left h1 {{ font-size:19px;font-weight:700;color:#f9fafb; }}
+        .header-left .meta {{ font-size:12px;color:#6b7280;margin-top:3px; }}
+        .header-left .meta a {{ color:#93c5fd;text-decoration:none; }}
+        .container {{ max-width:960px;margin:0 auto;padding:28px 20px 48px; }}
+        .intro-card {{
+          background:#fff;border:1px solid #e5e7eb;border-radius:10px;
+          padding:16px 20px;margin-bottom:28px;
+          font-size:14px;color:#374151;line-height:1.6;
+        }}
+        .section-title {{
+          font-size:16px;font-weight:700;color:#111827;
+          margin:32px 0 16px;
+          padding-bottom:12px;
+          border-bottom:1px solid #e5e7eb;
+        }}
+        .footer {{
+          text-align:center;padding:24px;color:#9ca3af;font-size:12px;
+          border-top:1px solid #e5e7eb;margin-top:8px;
+        }}
     </style>
+    <script>
+    function togglePassed(areaId) {{
+        var rows = document.querySelectorAll('.passed-row-' + areaId);
+        var arrow = document.getElementById('arrow-' + areaId);
+        var btn   = document.getElementById('btn-' + areaId);
+        var hidden = rows.length > 0 && rows[0].style.display === 'none';
+        rows.forEach(function(r) {{ r.style.display = hidden ? '' : 'none'; }});
+        if (arrow) arrow.style.transform = hidden ? 'rotate(90deg)' : '';
+        if (btn) {{
+          var count = rows.length;
+          var label = hidden
+            ? 'Hide ' + count + ' passed test' + (count !== 1 ? 's' : '')
+            : 'Show ' + count + ' passed test' + (count !== 1 ? 's' : '');
+          btn.innerHTML = '<span id="arrow-' + areaId + '" style="display:inline-block;transition:transform .2s;font-size:10px;transform:' + (hidden ? 'rotate(90deg)' : '') + '">▶</span>&nbsp;' + label;
+        }}
+    }}
+    </script>
 </head>
 <body>
-    <header style="background:#1a1a2e;color:#fff;padding:28px 32px 24px 32px;">
-        <div style="max-width:960px;margin:0 auto;">
-            <div style="font-size:13px;color:#a0aec0;margin-bottom:6px;">
-                <a href="index.html" style="color:#a0aec0;text-decoration:none;">← Back to Dashboard</a>
-            </div>
-            <h1 style="font-size:28px;font-weight:700;margin-bottom:6px;">📋 Test Catalog</h1>
-            <div style="color:#a0aec0;font-size:14px;">
-                Epic: <a href="{JIRA_BASE_URL}/browse/{JIRA_EPIC_KEY}" target="_blank" style="color:#7aa2f7;text-decoration:none;"><strong>{JIRA_EPIC_KEY}</strong></a> <strong style="color:#e2e8f0;">— {JIRA_EPIC_TITLE}</strong>
-                &nbsp;·&nbsp; Run: <code style="color:#e2e8f0;">{GITHUB_RUN_ID}</code>
-                &nbsp;·&nbsp; {RUN_TIMESTAMP}
+    <header class="header">
+        <div class="header-left">
+            <div class="breadcrumb"><a href="index.html">← Dashboard</a></div>
+            <h1>Test Catalog</h1>
+            <div class="meta">
+                Epic: <a href="{html.escape(JIRA_BASE_URL)}/browse/{html.escape(JIRA_EPIC_KEY)}" target="_blank">{html.escape(JIRA_EPIC_KEY)}</a>
+                &nbsp;—&nbsp; {html.escape(JIRA_EPIC_TITLE)}
+                &nbsp;·&nbsp; {html.escape(RUN_TIMESTAMP)}
             </div>
         </div>
     </header>
 
-    <main style="max-width:960px;margin:32px auto;padding:0 20px;">
-        <p style="background:#fff;border-radius:8px;padding:16px 20px;color:#4a5568;font-size:15px;box-shadow:0 1px 4px rgba(0,0,0,0.06);margin-bottom:28px;line-height:1.6;">
-            This catalog lists all automated Playwright tests. QA testers can use this page to understand test coverage and flag tests that need attention.
-        </p>
+    <main class="container">
+        <div class="intro-card">
+            All automated Playwright tests, organised by area. Failing tests are always visible; passing tests can be expanded per area. AI-proposed improvements are listed at the bottom.
+        </div>
 
-        {proposals_html}
-
+        <div class="section-title">Test coverage by area</div>
         {area_cards_html}
+
+        {('<div class="section-title">AI-Proposed Test Improvements</div>' + proposals_html) if proposals_html else ''}
     </main>
 
-    <footer style="text-align:center;padding:24px;color:#a0aec0;font-size:13px;border-top:1px solid #e2e8f0;margin-top:16px;">
+    <footer class="footer">
         QA Test Catalog &nbsp;·&nbsp; Generated by AI Test Pipeline &nbsp;·&nbsp; Stefgug/fwebsite
     </footer>
 </body>
 </html>"""
 
-    return html
+    return catalog_html
 
 
 # --------- Test Proposal Generation (Phase 1) ---------
@@ -1250,53 +1589,58 @@ def proposals_section_html(proposals: list[dict[str, Any]]) -> str:
     for p in proposals:
         kind = p.get("kind")
         if kind == "modify_test":
-            badge = '<span style="background:#8b5cf6;color:#fff;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">EDIT Modify existing test</span>'
-            border = "#8b5cf6"
+            badge = ('<span style="background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;'
+                     'padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">Modify existing test</span>')
         else:
-            badge = '<span style="background:#10b981;color:#fff;padding:3px 10px;border-radius:4px;font-size:12px;font-weight:600;">NEW test</span>'
-            border = "#10b981"
+            badge = ('<span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;'
+                     'padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">New test</span>')
         url = _proposal_issue_url(p)
         existing = html.escape(p.get("existing_code", "") or "")
         proposed = html.escape(p.get("proposed_code", "") or "")
         if kind == "modify_test" and existing:
             diff_block = f"""
-            <details style="margin-top:10px;">
-              <summary style="cursor:pointer;color:#6b7280;font-size:13px;">View change</summary>
-              <div style="font-size:12px;color:#991b1b;font-weight:600;margin-top:8px;">- Current</div>
-              <pre style="background:#fef2f2;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;"><code>{existing}</code></pre>
-              <div style="font-size:12px;color:#166534;font-weight:600;">+ Proposed</div>
-              <pre style="background:#f0fdf4;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;"><code>{proposed}</code></pre>
+            <details style="margin-top:12px;">
+              <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View change ↕</summary>
+              <div style="margin-top:10px;">
+                <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Current</div>
+                <pre style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>{existing}</code></pre>
+                <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;">Proposed</div>
+                <pre style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>{proposed}</code></pre>
+              </div>
             </details>"""
         else:
             diff_block = f"""
-            <details style="margin-top:10px;">
-              <summary style="cursor:pointer;color:#6b7280;font-size:13px;">View proposed test code</summary>
-              <pre style="background:#f0fdf4;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.5;"><code>{proposed}</code></pre>
+            <details style="margin-top:12px;">
+              <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View proposed test code ↕</summary>
+              <pre style="margin-top:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>{proposed}</code></pre>
             </details>"""
         cards += f"""
-        <div style="background:#fff;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,0.08);margin-bottom:18px;padding:18px 22px;border-left:5px solid {border};">
-            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:8px;">
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
                 {badge}
-                <h3 style="margin:0;font-size:17px;color:#1a1a2e;flex:1;">{html.escape(p.get('title', ''))}</h3>
-                <code style="font-size:12px;color:#6b7280;">{html.escape(p.get('target_file', ''))}</code>
+                <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">{html.escape(p.get('title', ''))}</h3>
+                <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">{html.escape(p.get('target_file', ''))}</code>
             </div>
-            <p style="color:#4a5568;font-size:14px;margin:6px 0;line-height:1.55;">{html.escape(p.get('rationale', ''))}</p>
-            <p style="color:#718096;font-size:13px;margin:6px 0;line-height:1.5;"><strong>Coverage check:</strong> {html.escape(p.get('coverage_check', ''))}</p>
+            <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">{html.escape(p.get('rationale', ''))}</p>
+            <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+                <strong style="color:#6b7280;">Coverage check:</strong> {html.escape(p.get('coverage_check', ''))}
+            </p>
             {diff_block}
             <div style="margin-top:14px;">
-                <a href="{url}" target="_blank" style="display:inline-block;background:#1a1a2e;color:#fff;padding:9px 18px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">Accept &amp; run this test</a>
+                <a href="{url}" target="_blank"
+                   style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                          padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                    Accept &amp; run this test →
+                </a>
             </div>
         </div>"""
 
     return f"""
-        <section style="margin-bottom:32px;">
-            <h2 style="font-size:22px;color:#1a1a2e;margin-bottom:6px;">AI-Proposed Test Improvements</h2>
-            <p style="color:#718096;font-size:14px;margin-bottom:18px;line-height:1.55;">
-                Claude analysed the failures and coverage gaps, then proposed the high-value tests below - each checked against the existing suite to avoid duplication.
-                Click <strong>Accept &amp; run</strong> to apply the change and validate it in a one-off run (no code is committed automatically).
-            </p>
-            {cards}
-        </section>"""
+        <div style="color:#6b7280;font-size:13px;margin-bottom:16px;line-height:1.55;">
+            Claude analysed failures and coverage gaps, then proposed the improvements below — each verified against the existing suite to avoid duplication.
+            Click <strong>Accept &amp; run</strong> to apply the change and validate it in a one-off run. Nothing is committed automatically.
+        </div>
+        {cards}"""
 
 
 # --------- Main ---------
