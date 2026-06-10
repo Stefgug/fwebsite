@@ -115,6 +115,59 @@ def existing_child_summaries(epic_key: str) -> set[str]:
     return summaries
 
 
+# --- Transition helper ---
+
+def transition_epic(issue_key: str, target_category: str, fallback_names: list[str]) -> bool:
+    """Transition an issue to the first transition whose destination status matches
+    target_category (statusCategory.key, e.g. 'indeterminate' for In Progress, 'done' for Done),
+    falling back to matching a status/transition name in fallback_names. Best-effort & fail-safe."""
+    if not (JIRA_EMAIL and JIRA_API_TOKEN and issue_key):
+        return False
+    try:
+        r = requests.get(
+            f"{JIRA_BASE_URL}/rest/api/3/issue/{issue_key}/transitions",
+            auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+            headers={"Accept": "application/json"},
+            timeout=20,
+        )
+        if not r.ok:
+            print(f"  (transition skipped: HTTP {r.status_code})")
+            return False
+        transitions = r.json().get("transitions", [])
+        names_lc = [n.lower() for n in fallback_names]
+        chosen = None
+        for t in transitions:
+            cat = (((t.get("to") or {}).get("statusCategory") or {}).get("key") or "").lower()
+            if cat == target_category:
+                chosen = t
+                break
+        if not chosen:
+            for t in transitions:
+                to_name = ((t.get("to") or {}).get("name") or "").lower()
+                tname = (t.get("name") or "").lower()
+                if to_name in names_lc or tname in names_lc:
+                    chosen = t
+                    break
+        if not chosen:
+            print(f"  (no transition found for category '{target_category}')")
+            return False
+        pr = requests.post(
+            f"{JIRA_BASE_URL}/rest/api/3/issue/{issue_key}/transitions",
+            auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            json={"transition": {"id": chosen["id"]}},
+            timeout=20,
+        )
+        if pr.ok:
+            print(f"  -> {issue_key} transitioned to '{(chosen.get('to') or {}).get('name')}'")
+            return True
+        print(f"  (transition POST failed: HTTP {pr.status_code} {pr.text[:200]})")
+        return False
+    except Exception as exc:
+        print(f"  (transition error: {exc})")
+        return False
+
+
 # --- Main flow ---
 
 def main() -> None:
@@ -139,6 +192,9 @@ def main() -> None:
 
     print(f"Epic title: {epic_title}")
     print(f"Description: {epic_description[:200]}...")
+
+    # Pipeline picked up the Epic -> move it to In Progress
+    transition_epic(JIRA_EPIC_KEY, "indeterminate", ["En cours", "In Progress"])
 
     # 2. Call Claude to generate Stories
     print("\nGenerating test coverage Stories with Claude...")
@@ -230,3 +286,4 @@ Do NOT include markdown fences, prose, or any text outside the JSON array."""
 
 if __name__ == "__main__":
     main()
+
