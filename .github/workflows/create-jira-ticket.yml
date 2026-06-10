@@ -1,0 +1,45 @@
+name: "Create Jira Ticket from Proposal"
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  create-jira:
+    name: Create Jira ticket under the Epic
+    if: github.event.label.name == 'create-jira-ticket'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Acknowledge
+        run: echo "Creating Jira ticket from issue ${{ github.event.issue.number }}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install requests
+
+      - name: Create Jira ticket
+        run: python scripts/create-jira-from-proposal.py
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JIRA_BASE_URL: https://stephaneguren.atlassian.net
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          JIRA_PROJECT_KEY: SCRUM

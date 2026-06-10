@@ -1,0 +1,105 @@
+name: "Code Change Analysis"
+
+# Anticipatory analysis: the moment the app changes (before any test runs),
+# an agent reads the diff and proposes which regression tests to update or add.
+on:
+  push:
+    branches-ignore:
+      - main
+      - gh-pages
+      - reports-store
+    paths:
+      - "frontend/**"
+      - "backend/**"
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+  issues: write
+
+concurrency:
+  group: pages-publish
+  cancel-in-progress: false
+
+env:
+  ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+  JIRA_BASE_URL: https://stephaneguren.atlassian.net
+  PAGES_URL: https://stefgug.github.io/fwebsite/
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  analyze:
+    name: Analyze code changes + update hub
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (full history for diff)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: pip install anthropic requests
+
+      - name: Ensure issue labels exist
+        run: |
+          for L in run-proposed-test create-jira-ticket; do
+            curl -s -o /dev/null -X POST \
+              -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/repos/${{ github.repository }}/labels" \
+              -d "{\"name\":\"$L\",\"color\":\"0e8a16\"}" || true
+          done
+          echo "labels ensured"
+
+      - name: Analyze changes
+        run: python scripts/analyze-code-changes.py
+        env:
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+
+      - name: Assemble Pages site (preserve the other report)
+        run: |
+          set -e
+          PUB=published
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          rm -rf "$PUB" && mkdir -p "$PUB"
+          if git ls-remote --exit-code --heads "$REPO_URL" reports-store >/dev/null 2>&1; then
+            git clone --depth 1 --branch reports-store "$REPO_URL" "$PUB"
+            rm -rf "$PUB/.git"
+          fi
+          cp -a automation-reports/. "$PUB"/
+          cd "$PUB"
+          git init -q
+          git checkout -q -b reports-store
+          git add -A
+          git -c user.email="actions@github.com" -c user.name="github-actions" \
+            commit -qm "reports: code-change analysis run ${{ github.run_id }}" || echo "nothing to commit"
+          git push -f "$REPO_URL" reports-store
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: published/
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: analyze
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
