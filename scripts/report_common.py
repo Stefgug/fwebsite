@@ -150,9 +150,23 @@ def proposal_card_html(p: dict[str, Any]) -> str:
         </details>"""
 
     run_url = proposal_issue_url(p, "run")
-    jira_url = proposal_issue_url(p, "jira")
-    epic_key = html.escape(p.get("jira_epic_key", "") or "")
-    jira_label = f"Create Jira ticket in {epic_key}" if epic_key else "Create Jira ticket"
+
+    # Jira button: editable Epic field + JS-built URL so the user can pick or change the Epic
+    p_id = str(id(p))
+    epic_default = html.escape(p.get("jira_epic_key", "") or "")
+    payload_for_jira = {
+        "id": p.get("id"),
+        "kind": p.get("kind"),
+        "target_file": p.get("target_file"),
+        "test_name": p.get("test_name"),
+        "title": p.get("title", ""),
+        "rationale": p.get("rationale", ""),
+        "coverage_check": p.get("coverage_check", ""),
+        "existing_code": p.get("existing_code", ""),
+        "proposed_code": p.get("proposed_code", ""),
+        "source": p.get("source", ""),
+    }
+    payload_attr = html.escape(json.dumps(payload_for_jira, ensure_ascii=True))
 
     return f"""
     <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
@@ -166,18 +180,25 @@ def proposal_card_html(p: dict[str, Any]) -> str:
             <strong style="color:#6b7280;">Coverage check:</strong> {html.escape(p.get('coverage_check', ''))}
         </p>
         {diff_block}
-        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             <a href="{run_url}" target="_blank"
                style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
                       padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
                 ▶ Run on a branch
             </a>
-            <a href="{jira_url}" target="_blank"
-               style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
-                      border:1px solid #bfdbfe;padding:8px 16px;border-radius:6px;text-decoration:none;
-                      font-weight:600;font-size:13px;">
-                🎫 {jira_label}
-            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-{p_id}" type="text" value="{epic_default}"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="{p_id}" data-payload="{payload_attr}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
         </div>
     </div>"""
 
@@ -192,7 +213,33 @@ def proposals_section_html(proposals: list[dict[str, Any]], intro: str | None = 
             f'<div style="color:#6b7280;font-size:13px;margin-bottom:16px;line-height:1.55;">{intro}</div>'
         )
     cards = "".join(proposal_card_html(p) for p in proposals)
-    return intro_html + cards
+    # JS helper: build GitHub new-issue URL with the user-supplied Epic key
+    jira_script = f"""<script>
+if (typeof openJiraIssue === 'undefined') {{
+  function openJiraIssue(btn) {{
+    var propId = btn.dataset.propId;
+    var payload = JSON.parse(btn.dataset.payload);
+    var epicInput = document.getElementById('epic-' + propId);
+    var epicKey = (epicInput ? epicInput.value : '').trim();
+    payload.jira_epic_key = epicKey;
+    var jsonBlock = '```json\\n' + JSON.stringify(payload) + '\\n```\\n';
+    var epicLabel = epicKey ? ' in ' + epicKey : '';
+    var title = '[QA] Create Jira ticket: ' + (payload.title || 'proposed test');
+    var body = '**Create a Jira ticket' + epicLabel + ' for this proposed test.**\\n\\n'
+      + '**Rationale:** ' + (payload.rationale || '') + '\\n\\n'
+      + '**Coverage check:** ' + (payload.coverage_check || '') + '\\n\\n'
+      + 'Opening this issue (it already carries the `create-jira-ticket` label) will create a '
+      + 'Jira ticket' + epicLabel + ' describing this work. No code is committed.\\n\\n'
+      + jsonBlock;
+    var url = 'https://github.com/{GITHUB_REPO}/issues/new'
+      + '?title=' + encodeURIComponent(title)
+      + '&labels=' + encodeURIComponent('create-jira-ticket')
+      + '&body=' + encodeURIComponent(body);
+    window.open(url, '_blank');
+  }}
+}}
+</script>"""
+    return jira_script + intro_html + cards
 
 
 # --------- Meta files + hub ---------

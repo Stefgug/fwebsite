@@ -115,23 +115,23 @@ def build_description(p: dict[str, Any]) -> dict[str, Any]:
 
 # --------- Jira create ---------
 
-def create_jira(p: dict[str, Any], epic_key: str) -> tuple[str, str] | None:
+def create_jira(p: dict[str, Any], epic_key: str | None) -> tuple[str, str] | None:
     auth = (JIRA_EMAIL, JIRA_API_TOKEN)
     headers = {"Accept": "application/json", "Content-Type": "application/json"}
     summary = f"[Test] {p.get('title', 'AI-proposed test')}"[:100]
     description = build_description(p)
 
     def _try(issuetype: str) -> tuple[str, str] | None:
-        payload = {
-            "fields": {
-                "project": {"key": JIRA_PROJECT_KEY},
-                "summary": summary,
-                "description": description,
-                "issuetype": {"name": issuetype},
-                "parent": {"key": epic_key},
-                "labels": ["ai-proposed-test"],
-            }
+        fields: dict[str, Any] = {
+            "project": {"key": JIRA_PROJECT_KEY},
+            "summary": summary,
+            "description": description,
+            "issuetype": {"name": issuetype},
+            "labels": ["ai-proposed-test"],
         }
+        if epic_key:
+            fields["parent"] = {"key": epic_key}
+        payload = {"fields": fields}
         r = requests.post(f"{JIRA_BASE_URL}/rest/api/3/issue", auth=auth, headers=headers, json=payload, timeout=20)
         if r.ok:
             key = r.json().get("key", "")
@@ -152,21 +152,23 @@ def main() -> None:
         gh_comment("Could not find a valid proposal JSON block in this issue. No Jira ticket created.")
         return
 
-    epic_key = (p.get("jira_epic_key") or "").strip()
-    if not epic_key or epic_key == "UNKNOWN-EPIC":
-        gh_comment("⚠️ This proposal has no associated Epic, so the ticket could not be parented. "
-                   "Re-generate the report once an Epic is set.")
-        return
+    raw_epic = (p.get("jira_epic_key") or "").strip()
+    epic_key: str | None = raw_epic if (raw_epic and raw_epic != "UNKNOWN-EPIC") else None
 
     result = create_jira(p, epic_key)
     if not result:
-        gh_comment(f"❌ Could not create a Jira ticket under `{epic_key}`. Check the workflow logs.")
+        target = f"under `{epic_key}`" if epic_key else "without an Epic"
+        gh_comment(f"❌ Could not create a Jira ticket {target}. Check the workflow logs.")
         return
 
     key, url = result
     print(f"Created Jira issue {key}")
+    if epic_key:
+        context = f"under Epic `{epic_key}`"
+    else:
+        context = "without an Epic (no Epic was specified — you can link it manually in Jira)"
     gh_comment(
-        f"✅ Created Jira ticket **[{key}]({url})** under Epic `{epic_key}`.\n\n"
+        f"✅ Created Jira ticket **[{key}]({url})** {context}.\n\n"
         f"It captures the proposed test (`{p.get('test_name', '')}` in `{p.get('target_file', '')}`), "
         "its rationale and the proposed code. Closing this issue."
     )
