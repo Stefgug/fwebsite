@@ -81,6 +81,40 @@ def extract_plain_text(adf_node: Any) -> str:
     return ""
 
 
+# --- Dedup helper ---
+
+def existing_child_summaries(epic_key: str) -> set[str]:
+    """Return the set of summaries of issues that are children of the Epic, so we can skip duplicates."""
+    summaries: set[str] = set()
+    next_token = None
+    while True:
+        body: dict[str, Any] = {"jql": f"parent = {epic_key}", "maxResults": 100, "fields": ["summary"]}
+        if next_token:
+            body["nextPageToken"] = next_token
+        try:
+            r = requests.post(
+                f"{JIRA_BASE_URL}/rest/api/3/search/jql",
+                auth=(JIRA_EMAIL, JIRA_API_TOKEN),
+                headers={"Accept": "application/json", "Content-Type": "application/json"},
+                json=body,
+                timeout=20,
+            )
+        except Exception:
+            break
+        if not r.ok:
+            print(f"  (dedup check skipped: HTTP {r.status_code})")
+            break
+        data = r.json()
+        for it in data.get("issues", []):
+            s = ((it.get("fields") or {}).get("summary") or "").strip()
+            if s:
+                summaries.add(s)
+        next_token = data.get("nextPageToken")
+        if not data.get("issues") or not next_token:
+            break
+    return summaries
+
+
 # --- Main flow ---
 
 def main() -> None:
@@ -152,10 +186,18 @@ Do NOT include markdown fences, prose, or any text outside the JSON array."""
     print(f"Claude generated {len(stories)} stories.")
 
     # 4. Create Jira issues for each Story
+    existing = existing_child_summaries(JIRA_EPIC_KEY)
+    if existing:
+        print(f"Found {len(existing)} existing child issue(s) under {JIRA_EPIC_KEY} — duplicates will be skipped.")
+
     created = 0
     for i, story in enumerate(stories, 1):
         summary = story.get("summary", f"Test Story {i}")
         description_text = story.get("description", "No description provided.")
+
+        if summary.strip() in existing or summary[:100].strip() in existing:
+            print(f"Skipping (already exists): {summary[:60]}")
+            continue
 
         payload = {
             "fields": {
