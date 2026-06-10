@@ -193,11 +193,57 @@ def build_adf(coverage_sentence: str, test_names: list[str], github_url: str = "
 # Jira API
 # ---------------------------------------------------------------------------
 
-def create_story(area: str, coverage: str, test_names: list[str], github_url: str = "") -> str | None:
+def existing_child_summaries(epic_key: str) -> set[str]:
+    """Summaries of issues already parented to the Epic, so we can skip duplicates on re-runs."""
+    summaries: set[str] = set()
+    next_token = None
+    while True:
+        body = {"jql": f"parent = {epic_key}", "maxResults": 100, "fields": ["summary"]}
+        if next_token:
+            body["nextPageToken"] = next_token
+        try:
+            r = requests.post(
+                f"{JIRA_BASE_URL}/rest/api/3/search/jql",
+                auth=AUTH,
+                headers=HEADERS,
+                json=body,
+                timeout=20,
+            )
+        except Exception:
+            break
+        if not r.ok:
+            print(f"  (dedup check skipped: HTTP {r.status_code})")
+            break
+        data = r.json()
+        for it in data.get("issues", []):
+            s = ((it.get("fields") or {}).get("summary") or "").strip()
+            if s:
+                summaries.add(s)
+        next_token = data.get("nextPageToken")
+        if not data.get("issues") or not next_token:
+            break
+    return summaries
+
+
+def create_story(
+    area: str,
+    coverage: str,
+    test_names: list[str],
+    github_url: str = "",
+    existing: set[str] | None = None,
+) -> str | None:
     """
     POST a Jira Story.  Returns the issue key on success, None on failure.
+
+    If ``existing`` contains this story's summary, the story is skipped
+    (no API call) and None is returned.
     """
     summary = f"🧪 Test Area: {area}"
+
+    if existing is not None and summary in existing:
+        print(f"  Skipping (already exists): {summary}")
+        return None
+
     description = build_adf(coverage, test_names, github_url=github_url)
 
     payload = {
@@ -233,6 +279,10 @@ def main() -> None:
     created = 0
     total = len(SPEC_FILES)
 
+    # Fetch summaries of issues already under the Epic once, so re-runs of the
+    # same Epic don't create duplicate "Test Area" stories.
+    existing = existing_child_summaries(JIRA_EPIC_KEY)
+
     for spec in SPEC_FILES:
         spec_path = ROOT / spec["path"]
         area = spec["area"]
@@ -254,7 +304,7 @@ def main() -> None:
 
         # Create story
         gh_url = f"https://github.com/Stefgug/fwebsite/blob/main/{spec['path']}"
-        key = create_story(area, spec["coverage"], test_names, github_url=gh_url)
+        key = create_story(area, spec["coverage"], test_names, github_url=gh_url, existing=existing)
         if key:
             print(f"Created: {key} — Test Area: {area}")
             created += 1
