@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>QA Dashboard — SCRUM-257</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #f8fafc;
+      color: #111827;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    /* ── Header ── */
+    .header {
+      background: #111827;
+      padding: 20px 32px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .header-left h1 { font-size: 20px; font-weight: 700; color: #f9fafb; }
+    .header-left .meta {
+      font-size: 12px; color: #6b7280; margin-top: 3px;
+    }
+    .header-left .meta a { color: #93c5fd; text-decoration: none; }
+    .header-left .meta a:hover { text-decoration: underline; }
+    .header-nav a {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #1f2937; color: #d1d5db;
+      border: 1px solid #374151;
+      padding: 7px 14px; border-radius: 6px;
+      text-decoration: none; font-size: 13px; font-weight: 500;
+      transition: background .15s;
+    }
+    .header-nav a:hover { background: #374151; color: #f9fafb; }
+    /* ── Layout ── */
+    .container { max-width: 1080px; margin: 0 auto; padding: 28px 20px 48px; }
+    /* ── Summary banner ── */
+    .summary-banner {
+      background: #fff7f7;
+      border: 1px solid #fca5a5;
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+    .banner-icon {
+      width: 28px; height: 28px; flex-shrink: 0;
+      border-radius: 50%;
+      background: #dc2626;
+      color: #fff; font-weight: 700; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .summary-banner p { font-size: 14px; color: #374151; line-height: 1.65; }
+    /* ── Cards grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px 22px;
+    }
+    .card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: .6px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .runner-chip {
+      background: #f3f4f6;
+      color: #374151;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 500;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+    /* ── Section headers ── */
+    .section-header {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin: 32px 0 14px;
+      flex-wrap: wrap;
+    }
+    .section-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #111827;
+    }
+    /* ── Failing tests table ── */
+    .table-wrap {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      text-align: left;
+      padding: 11px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid #f3f4f6;
+      vertical-align: top;
+    }
+    th { background: #f9fafb; font-weight: 600; color: #374151; font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+    tr:last-child td { border-bottom: none; }
+    td.td-name { font-weight: 500; white-space: nowrap; }
+    /* ── Blind spots ── */
+    .blind-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-top: 24px;
+    }
+    .blind-card-header {
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .blind-card-header h2 { font-size: 16px; font-weight: 700; color: #111827; }
+    .blind-list { list-style: none; padding: 0; }
+    .blind-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 0;
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.55;
+      border-bottom: 1px solid #f9fafb;
+    }
+    .blind-list li:last-child { border-bottom: none; }
+    .blind-note { margin-top: 14px; font-size: 12px; color: #9ca3af; font-style: italic; }
+    /* ── Visual evidence ── */
+    .ev-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .ev-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+    /* ── Footer ── */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      color: #9ca3af;
+      font-size: 12px;
+      margin-top: 32px;
+      border-top: 1px solid #e5e7eb;
+    }
+    /* ── Catalog strip ── */
+    .catalog-strip {
+      background: #1e3a5f;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .catalog-strip p {
+      color: #93c5fd;
+      font-size: 14px;
+      margin: 0;
+    }
+    .catalog-strip a.cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #2563eb;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+      transition: background .15s;
+    }
+    .catalog-strip a.cta:hover { background: #1d4ed8; }
+    /* ── Lightbox ── */
+    #lb-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.85);
+      z-index: 9999;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+    #lb-overlay.open { display: flex; }
+    #lb-overlay img {
+      max-width: 92vw;
+      max-height: 92vh;
+      border-radius: 6px;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    }
+    #lb-close {
+      position: fixed; top: 16px; right: 20px;
+      color: #fff; font-size: 28px; cursor: pointer;
+      line-height: 1; user-select: none;
+    }
+  </style>
+</head>
+<body>
+  <!-- Lightbox overlay -->
+  <div id="lb-overlay" onclick="closeLightbox()">
+    <span id="lb-close" onclick="closeLightbox()">×</span>
+    <img id="lb-img" src="" alt="" />
+  </div>
+  <script>
+    function openLightbox(e, src) {
+      e.preventDefault();
+      document.getElementById('lb-img').src = src;
+      document.getElementById('lb-overlay').classList.add('open');
+      document.addEventListener('keydown', _lbKey);
+    }
+    function closeLightbox() {
+      document.getElementById('lb-overlay').classList.remove('open');
+      document.getElementById('lb-img').src = '';
+      document.removeEventListener('keydown', _lbKey);
+    }
+    function _lbKey(e) { if (e.key === 'Escape') closeLightbox(); }
+  </script>
+  <header class="header">
+    <div class="header-left">
+      <div style="font-size:12px;color:#6b7280;margin-bottom:4px;"><a href="index.html" style="color:#9ca3af;text-decoration:none;">← Hub</a></div>
+      <h1>Post-Run Test Report</h1>
+      <div class="meta">
+        Epic: <a href="https://stephaneguren.atlassian.net/browse/SCRUM-257" target="_blank">SCRUM-257</a>
+        &nbsp;·&nbsp; 2026-06-10 15:51 UTC
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <div class="summary-banner">
+      <div class="banner-icon">✕</div>
+      <p>48 out of 49 automated tests passed, leaving one failure in the shopping cart that needs immediate attention. The missing Checkout button means customers with items in their cart cannot proceed to purchase, which is a direct block to completing an order. Overall the authentication and checkout flows are in good shape, but this cart issue should be resolved before the next release.</p>
+    </div>
+
+    <div class="cards-grid">
+      <div class="card">
+      <div class="card-label">Unit Tests <span class="runner-chip">Vitest</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><span style="width:8px;height:8px;border-radius:50%;background:#16a34a;flex-shrink:0;"></span><span style="font-size:14px;font-weight:600;color:#15803d;">All tests passed</span></div>
+      <div style="width:100%;height:6px;background:#fef9c3;border-radius:99px;overflow:hidden;margin-top:10px;"><div style="width:59.0%;height:100%;background:#ca8a04;border-radius:99px;transition:width .4s;"></div></div><div style="font-size:12px;color:#a16207;font-weight:600;margin-top:5px;">59.0% line coverage</div>
+    </div>
+      <div class="card">
+      <div class="card-label">E2E Tests <span class="runner-chip">Playwright</span></div>
+      
+        <div style="display:flex;gap:12px;margin-top:12px;">
+          <div style="flex:1;background:#f0fdf4;border-radius:8px;padding:12px 16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#15803d;line-height:1;">48</div>
+            <div style="font-size:12px;font-weight:500;color:#16a34a;margin-top:4px;letter-spacing:.5px;">PASSED</div>
+          </div>
+          <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;text-align:center;">
+            <div style="font-size:28px;font-weight:700;color:#b91c1c;line-height:1;">1</div>
+            <div style="font-size:12px;font-weight:500;color:#dc2626;margin-top:4px;letter-spacing:.5px;">FAILED</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#9ca3af;margin-top:10px;">49 tests total · 98% passing</div>
+    </div>
+    </div>
+
+    <div class="table-wrap"><div class="section-header"><h2>Failing Tests — Functional Impact</h2></div>
+        <table>
+            <thead><tr><th>Test</th><th>What broke for users</th><th>Suggested QA action</th></tr></thead>
+            <tbody><tr>
+                <td class="td-name">cart has a Checkout button when not empty</td>
+                <td>When a customer has added items to their cart and is ready to buy, the Checkout button does not appear, so they have no way to proceed to payment.</td>
+                <td>Manually add one or more products to the cart on the staging site and confirm whether a visible Checkout button appears, then try clicking it to see if it navigates correctly to the checkout page.</td>
+            </tr></tbody>
+        </table></div>
+
+    <div class="section-header"><h2>Visual Evidence</h2>
+        <span style="font-size:13px;color:#6b7280;">Screenshots taken at the moment each test failed · red box marks the problem area</span></div>
+        <div class="ev-grid"><div class="ev-card">
+                <div class="card-label" style="margin-bottom:8px;">cart has a Checkout button when not empty</div>
+                <div style="display:inline-flex;align-items:center;gap:6px;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;color:#b91c1c;margin-bottom:10px;">🎯 Proceed to Checkout button</div>
+                <a href="screenshots/cart_has_a_Checkout_button_when_not_empty.png" target="_blank" onclick="openLightbox(event, this.href)">
+                  <img src="screenshots/cart_has_a_Checkout_button_when_not_empty.png"
+                       alt="Screenshot of cart has a Checkout button when not empty"
+                       style="width:100%;border-radius:8px;border:1px solid #e5e7eb;cursor:zoom-in;display:block;" />
+                </a>
+                <div style="font-size:11px;color:#9ca3af;margin-top:6px;text-align:center;">Click to enlarge</div>
+            </div></div>
+
+    <div class="blind-card">
+        <div class="blind-card-header">
+          <span style="font-size:16px;">🔍</span>
+          <h2 style="margin:0;">Coverage Gaps</h2>
+          <span style="font-size:13px;color:#92400e;font-weight:500;">Areas not covered by automated tests</span>
+        </div>
+        <ul class="blind-list"><li><span style="color:#d97706;font-size:13px;margin-right:6px;">⚠</span>Manually verify that items added to the cart before logging in are still present in the cart after the customer signs in, so shoppers do not lose their selections during the login flow.</li>
+<li><span style="color:#d97706;font-size:13px;margin-right:6px;">⚠</span>Manually verify that after signing out, visiting the checkout page redirects the customer back to the sign-in page rather than allowing access to a protected order screen.</li>
+<li><span style="color:#d97706;font-size:13px;margin-right:6px;">⚠</span>Manually verify that after a customer registers a brand new account, they are automatically signed in and greeted by name without needing to log in a second time.</li>
+<li><span style="color:#d97706;font-size:13px;margin-right:6px;">⚠</span>Manually verify that entering incorrect login credentials shows a clear, user-friendly error message and that the customer remains on the sign-in page with no access granted.</li>
+<li><span style="color:#d97706;font-size:13px;margin-right:6px;">⚠</span>Manually verify the full end-to-end post-login redirect: a customer who tries to reach checkout while logged out, then signs in, should land back on the checkout page and be able to complete their order.</li></ul>
+        <p class="blind-note">These journeys should be verified manually or a new test should be requested via the catalog.</p>
+    </div>
+
+    <div class="footer">Generated by AI Test Pipeline · Stefgug/fwebsite</div>
+  </div>
+
+  <div class="catalog-strip">
+    <p>See all tests by area, AI-proposed improvements, and per-test flags.</p>
+    <a href="catalog.html" class="cta">📋 View Test Catalog →</a>
+  </div>
+</body>
+</html>

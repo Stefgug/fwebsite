@@ -1,0 +1,65 @@
+{
+  "epic": {
+    "key": "SCRUM-257",
+    "title": "Secure User Authentication & Checkout Access",
+    "description": "*Goal:* Customers must be able to register, sign in, and only reach checkout when authenticated, so that orders are always tied to a real account.\n\n*Acceptance criteria:*\n\n* A visitor can create an account with email + password and is signed in afterward.\n* A registered user can sign in with valid credentials and is greeted by name.\n* Invalid credentials show a clear error and do *not* sign the user in.\n* An unauthenticated user who tries to reach {{/checkout}} is redirected to sign-in.\n* After signing in, the user is returned to checkout and can complete the order.\n* Signing out clears the session and protected pages are no longer reachable.\n* The cart contents persist across sign-in (cart is not lost on login)."
+  },
+  "git": {
+    "sha": "e00a6837d7f086f1158af75144b64e7da8316c19",
+    "run_id": "27288210951"
+  },
+  "unit_outcome": "success",
+  "e2e_outcome": "success",
+  "playwright": {
+    "total": 49,
+    "passed": 48,
+    "failed": 1,
+    "skipped": 0,
+    "failures": [
+      {
+        "file": "cart.spec.ts",
+        "test": "cart has a Checkout button when not empty",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('a[href=\"/checkout\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('a[href=\"/checkout\"]')\u001b[22m\n",
+        "screenshot": "/home/runner/work/fwebsite/fwebsite/frontend/test-results/cart-Checkout-cart-has-a-Checkout-button-when-not-empty-chromium-retry1/test-failed-1.png"
+      }
+    ]
+  },
+  "coverage": {
+    "lines_pct": 59.02,
+    "functions_pct": 71.42,
+    "branches_pct": 85.45,
+    "statements_pct": 59.02,
+    "low_files": [
+      {
+        "file": "/home/runner/work/fwebsite/fwebsite/frontend/lib/auth.ts",
+        "lines_pct": 0.0,
+        "functions_pct": 0.0,
+        "branches_pct": 0.0
+      },
+      {
+        "file": "/home/runner/work/fwebsite/fwebsite/frontend/lib/strapi.ts",
+        "lines_pct": 42.1,
+        "functions_pct": 35.71,
+        "branches_pct": 54.54
+      }
+    ]
+  },
+  "workflow_ok": true,
+  "ai_triage": {
+    "summary": "48 out of 49 automated tests passed, leaving one failure in the shopping cart that needs immediate attention. The missing Checkout button means customers with items in their cart cannot proceed to purchase, which is a direct block to completing an order. Overall the authentication and checkout flows are in good shape, but this cart issue should be resolved before the next release.",
+    "failing_tests": [
+      {
+        "test_name": "cart has a Checkout button when not empty",
+        "functional_impact": "When a customer has added items to their cart and is ready to buy, the Checkout button does not appear, so they have no way to proceed to payment.",
+        "qa_action": "Manually add one or more products to the cart on the staging site and confirm whether a visible Checkout button appears, then try clicking it to see if it navigates correctly to the checkout page."
+      }
+    ],
+    "blind_spots": [
+      "Manually verify that items added to the cart before logging in are still present in the cart after the customer signs in, so shoppers do not lose their selections during the login flow.",
+      "Manually verify that after signing out, visiting the checkout page redirects the customer back to the sign-in page rather than allowing access to a protected order screen.",
+      "Manually verify that after a customer registers a brand new account, they are automatically signed in and greeted by name without needing to log in a second time.",
+      "Manually verify that entering incorrect login credentials shows a clear, user-friendly error message and that the customer remains on the sign-in page with no access granted.",
+      "Manually verify the full end-to-end post-login redirect: a customer who tries to reach checkout while logged out, then signs in, should land back on the checkout page and be able to complete their order."
+    ]
+  }
+}

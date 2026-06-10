@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Change Analysis — SCRUM-257</title>
+<style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: #f8fafc; color: #111827; font-size: 14px; line-height: 1.5;
+    }
+    a { color: #2563eb; }
+    .header {
+      background: #111827; padding: 20px 32px; display: flex;
+      align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;
+    }
+    .header-left .breadcrumb { font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+    .header-left .breadcrumb a { color: #9ca3af; text-decoration: none; }
+    .header-left .breadcrumb a:hover { color: #d1d5db; }
+    .header-left h1 { font-size: 20px; font-weight: 700; color: #f9fafb; }
+    .header-left .meta { font-size: 12px; color: #6b7280; margin-top: 3px; }
+    .header-left .meta a { color: #93c5fd; text-decoration: none; }
+    .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px 48px; }
+    .section-title {
+      font-size: 16px; font-weight: 700; color: #111827;
+      margin: 32px 0 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;
+    }
+    .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 20px 22px; }
+    .footer {
+      text-align: center; padding: 24px; color: #9ca3af; font-size: 12px;
+      border-top: 1px solid #e5e7eb; margin-top: 8px;
+    }
+
+  .summary-banner {
+    background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px;
+    padding:16px 20px; display:flex; gap:14px; align-items:flex-start; margin-bottom:8px;
+  }
+  .summary-banner .icon {
+    width:28px;height:28px;flex-shrink:0;border-radius:50%;background:#2563eb;color:#fff;
+    font-weight:700;display:flex;align-items:center;justify-content:center;
+  }
+  .summary-banner p { font-size:14px;color:#374151;line-height:1.65; }
+</style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-left">
+      <div class="breadcrumb"><a href="index.html">← Hub</a> &nbsp;·&nbsp; <a href="catalog.html">Test Catalog</a></div>
+      <h1>Code Change Analysis</h1>
+      <div class="meta">
+        Branch <code>demo/break-login-link</code> · Commit <code>1176c13f</code>
+        · Epic: <a href="https://stephaneguren.atlassian.net/browse/SCRUM-257" target="_blank">SCRUM-257</a>
+        · 2026-06-10 16:22 UTC
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="summary-banner">
+      <div class="icon">🔮</div>
+      <p>The navbar login link text was renamed from &#x27;Login&#x27; to &#x27;Sign In&#x27; in both the desktop and mobile menus. No routing or authentication logic changed — only the visible label. One existing navigation test that asserts the exact text &#x27;Login&#x27; will now fail and needs to be updated to match the new label.</p>
+    </div>
+
+    
+        <div class="section-title">Code changes detected</div>
+        <div class="card" style="padding:0;overflow:hidden;">
+          <table style="width:100%;border-collapse:collapse;">
+            <thead><tr style="background:#f9fafb;">
+              <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">File</th>
+              <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Functional change</th>
+              <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Risk</th>
+              <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Coverage</th>
+            </tr></thead>
+            <tbody><tr>
+            <td style="padding:11px 14px;font-size:13px;white-space:nowrap;"><code style="font-size:12px;color:#374151;">frontend/components/layout/Navbar.tsx</code></td>
+            <td style="padding:11px 14px;font-size:13px;color:#374151;">The desktop navigation bar login link label changed from &#x27;Login&#x27; to &#x27;Sign In&#x27;</td>
+            <td style="padding:11px 14px;white-space:nowrap;"><span style="background:#fffbeb;color:#a16207;border:1px solid #fde68a;padding:2px 9px;border-radius:5px;font-size:12px;font-weight:600;">Medium risk</span></td>
+            <td style="padding:11px 14px;white-space:nowrap;"><span style="color:#15803d;font-size:12px;font-weight:600;">✓ Covered</span></td>
+        </tr><tr>
+            <td style="padding:11px 14px;font-size:13px;white-space:nowrap;"><code style="font-size:12px;color:#374151;">frontend/components/layout/Navbar.tsx</code></td>
+            <td style="padding:11px 14px;font-size:13px;color:#374151;">The mobile navigation menu login link label changed from &#x27;Login&#x27; to &#x27;Sign In&#x27;</td>
+            <td style="padding:11px 14px;white-space:nowrap;"><span style="background:#fffbeb;color:#a16207;border:1px solid #fde68a;padding:2px 9px;border-radius:5px;font-size:12px;font-weight:600;">Medium risk</span></td>
+            <td style="padding:11px 14px;white-space:nowrap;"><span style="color:#b91c1c;font-size:12px;font-weight:600;">✕ Not covered</span></td>
+        </tr></tbody>
+          </table>
+        </div>
+
+    <div class="section-title">Proposed regression-test updates</div><script>
+if (typeof openJiraIssue === 'undefined') {
+  function openJiraIssue(btn) {
+    var propId = btn.dataset.propId;
+    var payload = JSON.parse(btn.dataset.payload);
+    var epicInput = document.getElementById('epic-' + propId);
+    var epicKey = (epicInput ? epicInput.value : '').trim();
+    payload.jira_epic_key = epicKey;
+    var jsonBlock = '```json\n' + JSON.stringify(payload) + '\n```\n';
+    var epicLabel = epicKey ? ' in ' + epicKey : '';
+    var title = '[QA] Create Jira ticket: ' + (payload.title || 'proposed test');
+    var body = '**Create a Jira ticket' + epicLabel + ' for this proposed test.**\n\n'
+      + '**Rationale:** ' + (payload.rationale || '') + '\n\n'
+      + '**Coverage check:** ' + (payload.coverage_check || '') + '\n\n'
+      + 'Opening this issue (it already carries the `create-jira-ticket` label) will create a '
+      + 'Jira ticket' + epicLabel + ' describing this work. No code is committed.\n\n'
+      + jsonBlock;
+    var url = 'https://github.com/Stefgug/fwebsite/issues/new'
+      + '?title=' + encodeURIComponent(title)
+      + '&labels=' + encodeURIComponent('create-jira-ticket')
+      + '&body=' + encodeURIComponent(body);
+    window.open(url, '_blank');
+  }
+}
+</script><div style="color:#6b7280;font-size:13px;margin-bottom:16px;line-height:1.55;">Anticipated from the code changes above — before the suite runs. Use <strong>Run on a branch</strong> to validate a proposal now, or <strong>Create Jira ticket</strong> to track it in the Epic if it's relevant.</div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">Modify existing test</span>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">Update login link visibility assertion to match new &#x27;Sign In&#x27; label</h3>
+            <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">frontend/tests/navigation.spec.ts</code>
+        </div>
+        <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">The app legitimately renamed the navbar login link from &#x27;Login&#x27; to &#x27;Sign In&#x27;, so the existing test that looks for the exact text &#x27;Login&#x27; will fail on every run until corrected. Fixing the selector keeps the regression suite green and continues to protect the real behaviour — that unauthenticated visitors can see and click a link to the login page.</p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+            <strong style="color:#6b7280;">Coverage check:</strong> navigation.spec.ts &#x27;login link is visible when not logged in&#x27; is the only test asserting the navbar login link text. auth.spec.ts covers the login page itself but not the navbar link. No other test checks this label, so updating here is not a duplicate.
+        </p>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View change ↕</summary>
+          <div style="margin-top:10px;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Current</div>
+            <pre style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>  test(&#x27;login link is visible when not logged in&#x27;, async ({ page }) =&gt; {
+    // Navbar shows &quot;Login&quot; (not &quot;Sign In&quot;) when user is not authenticated
+    const loginLink = page.getByRole(&#x27;link&#x27;, { name: /^Login$/i });
+    await expect(loginLink).toBeVisible();
+  });</code></pre>
+            <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;">Proposed</div>
+            <pre style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>  test(&#x27;login link is visible when not logged in&#x27;, async ({ page }) =&gt; {
+    // Navbar shows &quot;Sign In&quot; (renamed from &quot;Login&quot;) when user is not authenticated
+    const loginLink = page.getByRole(&#x27;link&#x27;, { name: /^Sign In$/i }).first();
+    await expect(loginLink).toBeVisible();
+    await expect(loginLink).toHaveAttribute(&#x27;href&#x27;, &#x27;/login&#x27;);
+  });</code></pre>
+          </div>
+        </details>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="https://github.com/Stefgug/fwebsite/issues/new?title=%5BQA%5D+Run+proposed+test%3A+Update+login+link+visibility+assertion+to+match+new+%27Sign+In%27+label&labels=run-proposed-test&body=%2A%2AAI-proposed+test+modification%2A%2A%0A%0A%2A%2ARationale%3A%2A%2A+The+app+legitimately+renamed+the+navbar+login+link+from+%27Login%27+to+%27Sign+In%27%2C+so+the+existing+test+that+looks+for+the+exact+text+%27Login%27+will+fail+on+every+run+until+corrected.+Fixing+the+selector+keeps+the+regression+suite+green+and+continues+to+protect+the+real+behaviour+%E2%80%94+that+unauthenticated+visitors+can+see+and+click+a+link+to+the+login+page.%0A%0A%2A%2ACoverage+check%3A%2A%2A+navigation.spec.ts+%27login+link+is+visible+when+not+logged+in%27+is+the+only+test+asserting+the+navbar+login+link+text.+auth.spec.ts+covers+the+login+page+itself+but+not+the+navbar+link.+No+other+test+checks+this+label%2C+so+updating+here+is+not+a+duplicate.%0A%0AOpening+this+issue+%28it+already+carries+the+%60run-proposed-test%60+label%29+will+apply+the+change+and+run+the+test+once+on+a+throwaway+checkout.+Nothing+is+committed+automatically.%0A%0A%60%60%60json%0A%7B%22id%22%3A+%22chg-1%22%2C+%22kind%22%3A+%22modify_test%22%2C+%22target_file%22%3A+%22frontend%2Ftests%2Fnavigation.spec.ts%22%2C+%22test_name%22%3A+%22login+link+is+visible+when+not+logged+in%22%2C+%22title%22%3A+%22Update+login+link+visibility+assertion+to+match+new+%27Sign+In%27+label%22%2C+%22rationale%22%3A+%22The+app+legitimately+renamed+the+navbar+login+link+from+%27Login%27+to+%27Sign+In%27%2C+so+the+existing+test+that+looks+for+the+exact+text+%27Login%27+will+fail+on+every+run+until+corrected.+Fixing+the+selector+keeps+the+regression+suite+green+and+continues+to+protect+the+real+behaviour+%E2%80%94+that+unauthenticated+visitors+can+see+and+click+a+link+to+the+login+page.%22%2C+%22coverage_check%22%3A+%22navigation.spec.ts+%27login+link+is+visible+when+not+logged+in%27+is+the+only+test+asserting+the+navbar+login+link+text.+auth.spec.ts+covers+the+login+page+itself+but+not+the+navbar+link.+No+other+test+checks+this+label%2C+so+updating+here+is+not+a+duplicate.%22%2C+%22existing_code%22%3A+%22++test%28%27login+link+is+visible+when+not+logged+in%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Navbar+shows+%5C%22Login%5C%22+%28not+%5C%22Sign+In%5C%22%29+when+user+is+not+authenticated%5Cn++++const+loginLink+%3D+page.getByRole%28%27link%27%2C+%7B+name%3A+%2F%5ELogin%24%2Fi+%7D%29%3B%5Cn++++await+expect%28loginLink%29.toBeVisible%28%29%3B%5Cn++%7D%29%3B%22%2C+%22proposed_code%22%3A+%22++test%28%27login+link+is+visible+when+not+logged+in%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Navbar+shows+%5C%22Sign+In%5C%22+%28renamed+from+%5C%22Login%5C%22%29+when+user+is+not+authenticated%5Cn++++const+loginLink+%3D+page.getByRole%28%27link%27%2C+%7B+name%3A+%2F%5ESign+In%24%2Fi+%7D%29.first%28%29%3B%5Cn++++await+expect%28loginLink%29.toBeVisible%28%29%3B%5Cn++++await+expect%28loginLink%29.toHaveAttribute%28%27href%27%2C+%27%2Flogin%27%29%3B%5Cn++%7D%29%3B%22%2C+%22jira_epic_key%22%3A+%22SCRUM-257%22%2C+%22source%22%3A+%22code-change%22%7D%0A%60%60%60%0A" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                      padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                ▶ Run on a branch
+            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-139827822423296" type="text" value="SCRUM-257"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="139827822423296" data-payload="{&quot;id&quot;: &quot;chg-1&quot;, &quot;kind&quot;: &quot;modify_test&quot;, &quot;target_file&quot;: &quot;frontend/tests/navigation.spec.ts&quot;, &quot;test_name&quot;: &quot;login link is visible when not logged in&quot;, &quot;title&quot;: &quot;Update login link visibility assertion to match new &#x27;Sign In&#x27; label&quot;, &quot;rationale&quot;: &quot;The app legitimately renamed the navbar login link from &#x27;Login&#x27; to &#x27;Sign In&#x27;, so the existing test that looks for the exact text &#x27;Login&#x27; will fail on every run until corrected. Fixing the selector keeps the regression suite green and continues to protect the real behaviour \u2014 that unauthenticated visitors can see and click a link to the login page.&quot;, &quot;coverage_check&quot;: &quot;navigation.spec.ts &#x27;login link is visible when not logged in&#x27; is the only test asserting the navbar login link text. auth.spec.ts covers the login page itself but not the navbar link. No other test checks this label, so updating here is not a duplicate.&quot;, &quot;existing_code&quot;: &quot;  test(&#x27;login link is visible when not logged in&#x27;, async ({ page }) =&gt; {\n    // Navbar shows \&quot;Login\&quot; (not \&quot;Sign In\&quot;) when user is not authenticated\n    const loginLink = page.getByRole(&#x27;link&#x27;, { name: /^Login$/i });\n    await expect(loginLink).toBeVisible();\n  });&quot;, &quot;proposed_code&quot;: &quot;  test(&#x27;login link is visible when not logged in&#x27;, async ({ page }) =&gt; {\n    // Navbar shows \&quot;Sign In\&quot; (renamed from \&quot;Login\&quot;) when user is not authenticated\n    const loginLink = page.getByRole(&#x27;link&#x27;, { name: /^Sign In$/i }).first();\n    await expect(loginLink).toBeVisible();\n    await expect(loginLink).toHaveAttribute(&#x27;href&#x27;, &#x27;/login&#x27;);\n  });&quot;, &quot;source&quot;: &quot;code-change&quot;}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
+        </div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">New test</span>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">Mobile menu shows &#x27;Sign In&#x27; link and navigates to login page</h3>
+            <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">frontend/tests/navigation.spec.ts</code>
+        </div>
+        <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">The mobile menu login link was also renamed but is not covered by any existing test — only the desktop link was previously tested. Adding this test ensures mobile users can always find and use the login entry point, which is a critical conversion path on small-screen devices.</p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+            <strong style="color:#6b7280;">Coverage check:</strong> navigation.spec.ts covers the desktop navbar login link only; no test sets a mobile viewport or opens the hamburger menu to verify the mobile login link. This is not a duplicate of the desktop assertion.
+        </p>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View proposed test code ↕</summary>
+          <pre style="margin-top:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>import { test, expect } from &#x27;@playwright/test&#x27;;
+
+test.describe(&#x27;Navigation — mobile menu&#x27;, () =&gt; {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test(&#x27;mobile menu shows Sign In link that navigates to login page&#x27;, async ({ page }) =&gt; {
+    await page.goto(&#x27;/&#x27;);
+
+    // Open the mobile hamburger menu
+    const menuButton = page.getByRole(&#x27;button&#x27;, { name: /menu|open/i });
+    await expect(menuButton).toBeVisible();
+    await menuButton.click();
+
+    // The mobile &#x27;Sign In&#x27; link should be visible
+    const signInLink = page.getByRole(&#x27;link&#x27;, { name: /^Sign In$/i });
+    await expect(signInLink).toBeVisible();
+    await expect(signInLink).toHaveAttribute(&#x27;href&#x27;, &#x27;/login&#x27;);
+
+    // Clicking it should navigate to the login page
+    await signInLink.click();
+    await expect(page).toHaveURL(&#x27;/login&#x27;);
+  });
+});</code></pre>
+        </details>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="https://github.com/Stefgug/fwebsite/issues/new?title=%5BQA%5D+Run+proposed+test%3A+Mobile+menu+shows+%27Sign+In%27+link+and+navigates+to+login+page&labels=run-proposed-test&body=%2A%2AAI-proposed+test+%28new%29%2A%2A%0A%0A%2A%2ARationale%3A%2A%2A+The+mobile+menu+login+link+was+also+renamed+but+is+not+covered+by+any+existing+test+%E2%80%94+only+the+desktop+link+was+previously+tested.+Adding+this+test+ensures+mobile+users+can+always+find+and+use+the+login+entry+point%2C+which+is+a+critical+conversion+path+on+small-screen+devices.%0A%0A%2A%2ACoverage+check%3A%2A%2A+navigation.spec.ts+covers+the+desktop+navbar+login+link+only%3B+no+test+sets+a+mobile+viewport+or+opens+the+hamburger+menu+to+verify+the+mobile+login+link.+This+is+not+a+duplicate+of+the+desktop+assertion.%0A%0AOpening+this+issue+%28it+already+carries+the+%60run-proposed-test%60+label%29+will+apply+the+change+and+run+the+test+once+on+a+throwaway+checkout.+Nothing+is+committed+automatically.%0A%0A%60%60%60json%0A%7B%22id%22%3A+%22chg-2%22%2C+%22kind%22%3A+%22new_test%22%2C+%22target_file%22%3A+%22frontend%2Ftests%2Fnavigation.spec.ts%22%2C+%22test_name%22%3A+%22mobile+menu+shows+Sign+In+link+that+navigates+to+login+page%22%2C+%22title%22%3A+%22Mobile+menu+shows+%27Sign+In%27+link+and+navigates+to+login+page%22%2C+%22rationale%22%3A+%22The+mobile+menu+login+link+was+also+renamed+but+is+not+covered+by+any+existing+test+%E2%80%94+only+the+desktop+link+was+previously+tested.+Adding+this+test+ensures+mobile+users+can+always+find+and+use+the+login+entry+point%2C+which+is+a+critical+conversion+path+on+small-screen+devices.%22%2C+%22coverage_check%22%3A+%22navigation.spec.ts+covers+the+desktop+navbar+login+link+only%3B+no+test+sets+a+mobile+viewport+or+opens+the+hamburger+menu+to+verify+the+mobile+login+link.+This+is+not+a+duplicate+of+the+desktop+assertion.%22%2C+%22existing_code%22%3A+%22%22%2C+%22proposed_code%22%3A+%22import+%7B+test%2C+expect+%7D+from+%27%40playwright%2Ftest%27%3B%5Cn%5Cntest.describe%28%27Navigation+%E2%80%94+mobile+menu%27%2C+%28%29+%3D%3E+%7B%5Cn++test.use%28%7B+viewport%3A+%7B+width%3A+390%2C+height%3A+844+%7D+%7D%29%3B%5Cn%5Cn++test%28%27mobile+menu+shows+Sign+In+link+that+navigates+to+login+page%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++await+page.goto%28%27%2F%27%29%3B%5Cn%5Cn++++%2F%2F+Open+the+mobile+hamburger+menu%5Cn++++const+menuButton+%3D+page.getByRole%28%27button%27%2C+%7B+name%3A+%2Fmenu%7Copen%2Fi+%7D%29%3B%5Cn++++await+expect%28menuButton%29.toBeVisible%28%29%3B%5Cn++++await+menuButton.click%28%29%3B%5Cn%5Cn++++%2F%2F+The+mobile+%27Sign+In%27+link+should+be+visible%5Cn++++const+signInLink+%3D+page.getByRole%28%27link%27%2C+%7B+name%3A+%2F%5ESign+In%24%2Fi+%7D%29%3B%5Cn++++await+expect%28signInLink%29.toBeVisible%28%29%3B%5Cn++++await+expect%28signInLink%29.toHaveAttribute%28%27href%27%2C+%27%2Flogin%27%29%3B%5Cn%5Cn++++%2F%2F+Clicking+it+should+navigate+to+the+login+page%5Cn++++await+signInLink.click%28%29%3B%5Cn++++await+expect%28page%29.toHaveURL%28%27%2Flogin%27%29%3B%5Cn++%7D%29%3B%5Cn%7D%29%3B%22%2C+%22jira_epic_key%22%3A+%22SCRUM-257%22%2C+%22source%22%3A+%22code-change%22%7D%0A%60%60%60%0A" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                      padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                ▶ Run on a branch
+            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-139827821135296" type="text" value="SCRUM-257"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="139827821135296" data-payload="{&quot;id&quot;: &quot;chg-2&quot;, &quot;kind&quot;: &quot;new_test&quot;, &quot;target_file&quot;: &quot;frontend/tests/navigation.spec.ts&quot;, &quot;test_name&quot;: &quot;mobile menu shows Sign In link that navigates to login page&quot;, &quot;title&quot;: &quot;Mobile menu shows &#x27;Sign In&#x27; link and navigates to login page&quot;, &quot;rationale&quot;: &quot;The mobile menu login link was also renamed but is not covered by any existing test \u2014 only the desktop link was previously tested. Adding this test ensures mobile users can always find and use the login entry point, which is a critical conversion path on small-screen devices.&quot;, &quot;coverage_check&quot;: &quot;navigation.spec.ts covers the desktop navbar login link only; no test sets a mobile viewport or opens the hamburger menu to verify the mobile login link. This is not a duplicate of the desktop assertion.&quot;, &quot;existing_code&quot;: &quot;&quot;, &quot;proposed_code&quot;: &quot;import { test, expect } from &#x27;@playwright/test&#x27;;\n\ntest.describe(&#x27;Navigation \u2014 mobile menu&#x27;, () =&gt; {\n  test.use({ viewport: { width: 390, height: 844 } });\n\n  test(&#x27;mobile menu shows Sign In link that navigates to login page&#x27;, async ({ page }) =&gt; {\n    await page.goto(&#x27;/&#x27;);\n\n    // Open the mobile hamburger menu\n    const menuButton = page.getByRole(&#x27;button&#x27;, { name: /menu|open/i });\n    await expect(menuButton).toBeVisible();\n    await menuButton.click();\n\n    // The mobile &#x27;Sign In&#x27; link should be visible\n    const signInLink = page.getByRole(&#x27;link&#x27;, { name: /^Sign In$/i });\n    await expect(signInLink).toBeVisible();\n    await expect(signInLink).toHaveAttribute(&#x27;href&#x27;, &#x27;/login&#x27;);\n\n    // Clicking it should navigate to the login page\n    await signInLink.click();\n    await expect(page).toHaveURL(&#x27;/login&#x27;);\n  });\n});&quot;, &quot;source&quot;: &quot;code-change&quot;}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
+        </div>
+    </div>
+  </main>
+
+  <footer class="footer">Anticipatory analysis · runs before the suite · Stefgug/fwebsite</footer>
+</body>
+</html>

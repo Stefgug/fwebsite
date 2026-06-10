@@ -1,0 +1,12 @@
+{
+  "type": "code-analysis",
+  "title": "Code Change Analysis",
+  "href": "code-analysis.html",
+  "generated_at": "2026-06-10 16:22 UTC",
+  "generated_ts": 1781108526,
+  "epic_key": "SCRUM-257",
+  "branch": "demo/break-login-link",
+  "commit": "1176c13f",
+  "n_changes": 1,
+  "n_proposals": 2
+}

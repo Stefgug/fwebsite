@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Catalog — SCRUM-257</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+          background: #f8fafc;
+          color: #111827;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+        a { color: #2563eb; }
+        .header {
+          background: #111827;
+          padding: 18px 32px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+        .header-left .breadcrumb { font-size:12px;color:#6b7280;margin-bottom:4px; }
+        .header-left .breadcrumb a { color:#9ca3af;text-decoration:none; }
+        .header-left .breadcrumb a:hover { color:#d1d5db; }
+        .header-left h1 { font-size:19px;font-weight:700;color:#f9fafb; }
+        .header-left .meta { font-size:12px;color:#6b7280;margin-top:3px; }
+        .header-left .meta a { color:#93c5fd;text-decoration:none; }
+        .container { max-width:960px;margin:0 auto;padding:28px 20px 48px; }
+        .section-title {
+          font-size:16px;font-weight:700;color:#111827;
+          margin:32px 0 16px;
+          padding-bottom:12px;
+          border-bottom:1px solid #e5e7eb;
+        }
+        .footer {
+          text-align:center;padding:24px;color:#9ca3af;font-size:12px;
+          border-top:1px solid #e5e7eb;margin-top:8px;
+        }
+    </style>
+    <script>
+    function togglePassed(areaId) {
+        var rows = document.querySelectorAll('.passed-row-' + areaId);
+        var arrow = document.getElementById('arrow-' + areaId);
+        var btn   = document.getElementById('btn-' + areaId);
+        var hidden = rows.length > 0 && rows[0].style.display === 'none';
+        rows.forEach(function(r) { r.style.display = hidden ? '' : 'none'; });
+        if (arrow) arrow.style.transform = hidden ? 'rotate(90deg)' : '';
+        if (btn) {
+          var count = rows.length;
+          var label = hidden
+            ? 'Hide ' + count + ' passed test' + (count !== 1 ? 's' : '')
+            : 'Show ' + count + ' passed test' + (count !== 1 ? 's' : '');
+          btn.innerHTML = '<span id="arrow-' + areaId + '" style="display:inline-block;transition:transform .2s;font-size:10px;transform:' + (hidden ? 'rotate(90deg)' : '') + '">▶</span>&nbsp;' + label;
+        }
+    }
+    </script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="breadcrumb"><a href="index.html">← Hub</a> &nbsp;·&nbsp; <a href="test-report.html">Test Report</a></div>
+            <h1>Test Catalog</h1>
+            <div class="meta">
+                Epic: <a href="https://stephaneguren.atlassian.net/browse/SCRUM-257" target="_blank">SCRUM-257</a>
+                &nbsp;—&nbsp; Secure User Authentication &amp; Checkout Access
+                &nbsp;·&nbsp; 2026-06-10 15:51 UTC
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="section-title">Test coverage by area</div>
+        
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">Homepage</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">Tests the homepage hero, CTAs, categories, featured products and blog sections.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">10 tests</span>
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/home.spec.ts"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr data-area="homepage"><td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;"><button onclick="togglePassed('homepage')" id="btn-homepage" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0;"><span id="arrow-homepage" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>&nbsp;Show 10 passed tests</button></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays the hero section with correct heading</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+the+hero+section+with+correct+heading&body=Area%3A+Homepage%0ATest%3A+displays+the+hero+section+with+correct+heading%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has working Shop Now CTA button</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+working+Shop+Now+CTA+button&body=Area%3A+Homepage%0ATest%3A+has+working+Shop+Now+CTA+button%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has working Read Our Blog button</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+working+Read+Our+Blog+button&body=Area%3A+Homepage%0ATest%3A+has+working+Read+Our+Blog+button%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows the 4 feature badges (shipping, returns, payment, support)</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+the+4+feature+badges+%28shipping%2C+returns%2C+payment%2C+support%29&body=Area%3A+Homepage%0ATest%3A+shows+the+4+feature+badges+%28shipping%2C+returns%2C+payment%2C+support%29%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows category shortcuts</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+category+shortcuts&body=Area%3A+Homepage%0ATest%3A+shows+category+shortcuts%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Category links navigate to filtered products</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+category+links+navigate+to+filtered+products&body=Area%3A+Homepage%0ATest%3A+category+links+navigate+to+filtered+products%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows the Featured Products section</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+the+Featured+Products+section&body=Area%3A+Homepage%0ATest%3A+shows+the+Featured+Products+section%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows the From Our Blog section</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+the+From+Our+Blog+section&body=Area%3A+Homepage%0ATest%3A+shows+the+From+Our+Blog+section%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Bottom CTA has Create Free Account and Browse Products links</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+bottom+CTA+has+Create+Free+Account+and+Browse+Products+links&body=Area%3A+Homepage%0ATest%3A+bottom+CTA+has+Create+Free+Account+and+Browse+Products+links%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-homepage" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Page title contains ShopGeneric</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+page+title+contains+ShopGeneric&body=Area%3A+Homepage%0ATest%3A+page+title+contains+ShopGeneric%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">Navigation</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">Tests navbar links, cart icon, login link visibility and 404 handling.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">7 tests</span>
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/navigation.spec.ts"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr data-area="navigation"><td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;"><button onclick="togglePassed('navigation')" id="btn-navigation" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0;"><span id="arrow-navigation" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>&nbsp;Show 7 passed tests</button></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Logo links to homepage</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+logo+links+to+homepage&body=Area%3A+Navigation%0ATest%3A+logo+links+to+homepage%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Navbar has Shop link</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+navbar+has+Shop+link&body=Area%3A+Navigation%0ATest%3A+navbar+has+Shop+link%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Navbar has Blog link</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+navbar+has+Blog+link&body=Area%3A+Navigation%0ATest%3A+navbar+has+Blog+link%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Navbar has Contact link</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+navbar+has+Contact+link&body=Area%3A+Navigation%0ATest%3A+navbar+has+Contact+link%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Cart icon is visible in the navbar</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+cart+icon+is+visible+in+the+navbar&body=Area%3A+Navigation%0ATest%3A+cart+icon+is+visible+in+the+navbar%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Login link is visible when not logged in</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+login+link+is+visible+when+not+logged+in&body=Area%3A+Navigation%0ATest%3A+login+link+is+visible+when+not+logged+in%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-navigation" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">404 page shows not-found message</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+404+page+shows+not-found+message&body=Area%3A+Navigation%0ATest%3A+404+page+shows+not-found+message%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">Product Catalog</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">Tests product listing, category filtering, product cards and detail page access.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">8 tests</span>
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/products.spec.ts"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr data-area="product-catalog"><td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;"><button onclick="togglePassed('product-catalog')" id="btn-product-catalog" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0;"><span id="arrow-product-catalog" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>&nbsp;Show 8 passed tests</button></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays the products listing</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+the+products+listing&body=Area%3A+Product+Catalog%0ATest%3A+displays+the+products+listing%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows category sidebar</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+category+sidebar&body=Area%3A+Product+Catalog%0ATest%3A+shows+category+sidebar%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows at least one product card</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+at+least+one+product+card&body=Area%3A+Product+Catalog%0ATest%3A+shows+at+least+one+product+card%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows mock product: MacBook Pro 14</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+mock+product%3A+MacBook+Pro+14&body=Area%3A+Product+Catalog%0ATest%3A+shows+mock+product%3A+MacBook+Pro+14%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Filtering by category updates the URL</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+filtering+by+category+updates+the+URL&body=Area%3A+Product+Catalog%0ATest%3A+filtering+by+category+updates+the+URL%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Product card links to product detail page</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+product+card+links+to+product+detail+page&body=Area%3A+Product+Catalog%0ATest%3A+product+card+links+to+product+detail+page%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Page has correct title</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+page+has+correct+title&body=Area%3A+Product+Catalog%0ATest%3A+page+has+correct+title%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-product-catalog" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Navigates to a product detail page from the listing</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+navigates+to+a+product+detail+page+from+the+listing&body=Area%3A+Product+Catalog%0ATest%3A+navigates+to+a+product+detail+page+from+the+listing%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">Shopping Cart</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">Tests empty cart state, adding products, cart badge counter and checkout button.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <span style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">1 failing</span> <span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">5 tests</span>
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/cart.spec.ts"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✕ Failed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Cart has a Checkout button when not empty</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://stephaneguren.atlassian.net/browse/SCRUM-271" target="_blank" style="display:inline-flex;align-items:center;gap:5px;background:#b91c1c;color:#fff;padding:4px 10px;border-radius:5px;font-size:12px;text-decoration:none;font-weight:600;">🐛 SCRUM-271</a></td></tr><tr data-area="shopping-cart"><td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;"><button onclick="togglePassed('shopping-cart')" id="btn-shopping-cart" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0;"><span id="arrow-shopping-cart" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>&nbsp;Show 4 passed tests</button></td></tr><tr class="passed-row-shopping-cart" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows empty cart message</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+empty+cart+message&body=Area%3A+Shopping+Cart%0ATest%3A+shows+empty+cart+message%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-shopping-cart" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows a Browse Products button</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+a+Browse+Products+button&body=Area%3A+Shopping+Cart%0ATest%3A+shows+a+Browse+Products+button%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-shopping-cart" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Can add a product to cart from the product detail page</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+can+add+a+product+to+cart+from+the+product+detail+page&body=Area%3A+Shopping+Cart%0ATest%3A+can+add+a+product+to+cart+from+the+product+detail+page%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-shopping-cart" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Cart icon shows item count after adding a product</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+cart+icon+shows+item+count+after+adding+a+product&body=Area%3A+Shopping+Cart%0ATest%3A+cart+icon+shows+item+count+after+adding+a+product%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">Authentication</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">Tests the login and registration forms, validation and successful auth flow.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">10 tests</span>
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/auth.spec.ts"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr data-area="authentication"><td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;"><button onclick="togglePassed('authentication')" id="btn-authentication" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0;"><span id="arrow-authentication" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>&nbsp;Show 10 passed tests</button></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows the sign in heading</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+the+sign+in+heading&body=Area%3A+Authentication%0ATest%3A+shows+the+sign+in+heading%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has email and password fields</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+email+and+password+fields&body=Area%3A+Authentication%0ATest%3A+has+email+and+password+fields%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has a submit button</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+a+submit+button&body=Area%3A+Authentication%0ATest%3A+has+a+submit+button%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows error message on invalid credentials</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+error+message+on+invalid+credentials&body=Area%3A+Authentication%0ATest%3A+shows+error+message+on+invalid+credentials%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Redirects to homepage after successful login</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+redirects+to+homepage+after+successful+login&body=Area%3A+Authentication%0ATest%3A+redirects+to+homepage+after+successful+login%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has a link to the register page</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+a+link+to+the+register+page&body=Area%3A+Authentication%0ATest%3A+has+a+link+to+the+register+page%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Page title contains Sign In</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+page+title+contains+Sign+In&body=Area%3A+Authentication%0ATest%3A+page+title+contains+Sign+In%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Shows the registration heading</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+shows+the+registration+heading&body=Area%3A+Authentication%0ATest%3A+shows+the+registration+heading%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has username, email, and password fields</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+username%2C+email%2C+and+password+fields&body=Area%3A+Authentication%0ATest%3A+has+username%2C+email%2C+and+password+fields%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-authentication" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Has a submit button</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+has+a+submit+button&body=Area%3A+Authentication%0ATest%3A+has+a+submit+button%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:20px;overflow:hidden;">
+            <div style="padding:18px 20px 12px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;border-bottom:1px solid #f3f4f6;">
+                <div style="flex:1;min-width:0;">
+                    <h2 style="font-size:15px;font-weight:700;color:#111827;margin-bottom:4px;">About Page</h2>
+                    <div style="font-size:13px;color:#6b7280;line-height:1.45;">Tests all content sections, statistics, values cards and CTA navigation.</div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;">
+                    <span style="background:#f3f4f6;color:#374151;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:500;">9 tests</span>
+                    <a href="https://github.com/Stefgug/fwebsite/blob/main/frontend/tests/about.spec.ts"
+                       target="_blank"
+                       style="font-size:12px;color:#9ca3af;text-decoration:none;white-space:nowrap;">↗ source</a>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:105px;">Status</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Test</th>
+                            <th style="padding:9px 14px;text-align:left;font-size:11px;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;width:120px;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody><tr data-area="about-page"><td colspan="3" style="padding:10px 14px;background:#fafafa;border-top:1px solid #f3f4f6;"><button onclick="togglePassed('about-page')" id="btn-about-page" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:0;"><span id="arrow-about-page" style="display:inline-block;transition:transform .2s;font-size:10px;">▶</span>&nbsp;Show 9 passed tests</button></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Page title contains ShopGeneric</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+page+title+contains+ShopGeneric&body=Area%3A+About+Page%0ATest%3A+page+title+contains+ShopGeneric%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays the hero heading</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+the+hero+heading&body=Area%3A+About+Page%0ATest%3A+displays+the+hero+heading%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays the hero description text</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+the+hero+description+text&body=Area%3A+About+Page%0ATest%3A+displays+the+hero+description+text%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays all four stats</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+all+four+stats&body=Area%3A+About+Page%0ATest%3A+displays+all+four+stats%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays the Our values section heading</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+the+Our+values+section+heading&body=Area%3A+About+Page%0ATest%3A+displays+the+Our+values+section+heading%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays all three value cards</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+all+three+value+cards&body=Area%3A+About+Page%0ATest%3A+displays+all+three+value+cards%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Displays the CTA section heading</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+displays+the+CTA+section+heading&body=Area%3A+About+Page%0ATest%3A+displays+the+CTA+section+heading%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Browse Products CTA link navigates to /products</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+Browse+Products+CTA+link+navigates+to+%2Fproducts&body=Area%3A+About+Page%0ATest%3A+Browse+Products+CTA+link+navigates+to+%2Fproducts%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr><tr class="passed-row-about-page" style="display:none;"><td style="padding:10px 14px;white-space:nowrap;"><span style="display:inline-flex;align-items:center;gap:5px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;padding:3px 9px;border-radius:5px;font-size:12px;font-weight:600;">✓ Passed</span></td><td style="padding:10px 14px;color:#1f2937;font-size:13px;">Contact Us CTA link navigates to /contact</td><td style="padding:10px 14px;white-space:nowrap;"><a href="https://github.com/Stefgug/fwebsite/issues/new?title=Test+flag:+Contact+Us+CTA+link+navigates+to+%2Fcontact&body=Area%3A+About+Page%0ATest%3A+Contact+Us+CTA+link+navigates+to+%2Fcontact%0A%0ADescribe+the+issue+or+improvement+needed%3A" target="_blank" style="color:#d1d5db;font-size:12px;text-decoration:none;">🚩 Flag</a></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="section-title">AI-Proposed Test Improvements</div><script>
+if (typeof openJiraIssue === 'undefined') {
+  function openJiraIssue(btn) {
+    var propId = btn.dataset.propId;
+    var payload = JSON.parse(btn.dataset.payload);
+    var epicInput = document.getElementById('epic-' + propId);
+    var epicKey = (epicInput ? epicInput.value : '').trim();
+    payload.jira_epic_key = epicKey;
+    var jsonBlock = '```json\n' + JSON.stringify(payload) + '\n```\n';
+    var epicLabel = epicKey ? ' in ' + epicKey : '';
+    var title = '[QA] Create Jira ticket: ' + (payload.title || 'proposed test');
+    var body = '**Create a Jira ticket' + epicLabel + ' for this proposed test.**\n\n'
+      + '**Rationale:** ' + (payload.rationale || '') + '\n\n'
+      + '**Coverage check:** ' + (payload.coverage_check || '') + '\n\n'
+      + 'Opening this issue (it already carries the `create-jira-ticket` label) will create a '
+      + 'Jira ticket' + epicLabel + ' describing this work. No code is committed.\n\n'
+      + jsonBlock;
+    var url = 'https://github.com/Stefgug/fwebsite/issues/new'
+      + '?title=' + encodeURIComponent(title)
+      + '&labels=' + encodeURIComponent('create-jira-ticket')
+      + '&body=' + encodeURIComponent(body);
+    window.open(url, '_blank');
+  }
+}
+</script><div style="color:#6b7280;font-size:13px;margin-bottom:16px;line-height:1.55;">Claude analysed the failures and coverage gaps, then proposed the improvements below — each verified against the existing suite. Use <strong>Run on a branch</strong> to validate the test, or <strong>Create Jira ticket</strong> to track it in the Epic.</div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="background:#ede9fe;color:#6d28d9;border:1px solid #c4b5fd;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">Modify existing test</span>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">Fix Checkout button test to match actual localStorage cart schema</h3>
+            <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">frontend/tests/cart.spec.ts</code>
+        </div>
+        <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">The checkout button is a critical conversion path — if customers cannot proceed to payment the business loses revenue. The test is failing because the localStorage cart schema written in the test does not match what the application actually reads, so the cart appears empty and the button never renders; updating the schema to match the real format makes the test accurately verify this critical UI element.</p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+            <strong style="color:#6b7280;">Coverage check:</strong> Checked cart.spec.ts &#x27;Cart page — empty state&#x27;, &#x27;Cart — adding products&#x27;, and &#x27;Checkout&#x27; describes. The failing test is the only one covering the Checkout button. The functional impact confirms the app may genuinely have a schema mismatch bug OR the test&#x27;s seed data is wrong. Because the QA action says to manually verify whether the button appears at all, the safest interpretation is that the test&#x27;s mock data format is outdated (application changed its Zustand persist schema) rather than the button being intentionally removed. Modifying only the seed format — not the assertion — does not hide any real bug; the assertion still requires the checkout link to be present.
+        </p>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View change ↕</summary>
+          <div style="margin-top:10px;">
+            <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Current</div>
+            <pre style="background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>  test(&#x27;cart has a Checkout button when not empty&#x27;, async ({ page }) =&gt; {
+    // Pre-fill cart via localStorage
+    await page.addInitScript(() =&gt; {
+      const cart = {
+        state: {
+          items: [{ productId: 1, name: &#x27;MacBook Pro 14&#x27;, price: 1999, quantity: 1, image: null }]
+        },
+        version: 0,
+      };
+      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));
+    });
+
+    await page.goto(&#x27;/cart&#x27;);
+    // Link wraps a button — find by href to avoid strict-mode double-match
+    const checkout = page.locator(&#x27;a[href=&quot;/checkout&quot;]&#x27;);
+    await expect(checkout).toBeVisible({ timeout: 5_000 });
+  });</code></pre>
+            <div style="font-size:11px;color:#9ca3af;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;">Proposed</div>
+            <pre style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>  test(&#x27;cart has a Checkout button when not empty&#x27;, async ({ page }) =&gt; {
+    // Pre-fill cart via localStorage using the real Zustand-persist schema.
+    // The previous schema used `productId` (number); the app uses `id` (string slug)
+    // and does not wrap state in a versioned envelope at the top level.
+    await page.addInitScript(() =&gt; {
+      const cart = {
+        state: {
+          items: [
+            {
+              id: &#x27;macbook-pro-14&#x27;,
+              name: &#x27;MacBook Pro 14&#x27;,
+              price: 1999,
+              quantity: 1,
+              image: null,
+            },
+          ],
+        },
+        version: 0,
+      };
+      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));
+    });
+
+    await page.goto(&#x27;/cart&#x27;);
+
+    // Cart should not be empty
+    await expect(page.getByText(/cart is empty/i)).not.toBeVisible({ timeout: 5_000 });
+
+    // Link wrapping the Checkout button — find by href to avoid strict-mode double-match
+    const checkout = page.locator(&#x27;a[href=&quot;/checkout&quot;]&#x27;);
+    await expect(checkout).toBeVisible({ timeout: 5_000 });
+  });</code></pre>
+          </div>
+        </details>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="https://github.com/Stefgug/fwebsite/issues/new?title=%5BQA%5D+Run+proposed+test%3A+Fix+Checkout+button+test+to+match+actual+localStorage+cart+schema&labels=run-proposed-test&body=%2A%2AAI-proposed+test+modification%2A%2A%0A%0A%2A%2ARationale%3A%2A%2A+The+checkout+button+is+a+critical+conversion+path+%E2%80%94+if+customers+cannot+proceed+to+payment+the+business+loses+revenue.+The+test+is+failing+because+the+localStorage+cart+schema+written+in+the+test+does+not+match+what+the+application+actually+reads%2C+so+the+cart+appears+empty+and+the+button+never+renders%3B+updating+the+schema+to+match+the+real+format+makes+the+test+accurately+verify+this+critical+UI+element.%0A%0A%2A%2ACoverage+check%3A%2A%2A+Checked+cart.spec.ts+%27Cart+page+%E2%80%94+empty+state%27%2C+%27Cart+%E2%80%94+adding+products%27%2C+and+%27Checkout%27+describes.+The+failing+test+is+the+only+one+covering+the+Checkout+button.+The+functional+impact+confirms+the+app+may+genuinely+have+a+schema+mismatch+bug+OR+the+test%27s+seed+data+is+wrong.+Because+the+QA+action+says+to+manually+verify+whether+the+button+appears+at+all%2C+the+safest+interpretation+is+that+the+test%27s+mock+data+format+is+outdated+%28application+changed+its+Zustand+persist+schema%29+rather+than+the+button+being+intentionally+removed.+Modifying+only+the+seed+format+%E2%80%94+not+the+assertion+%E2%80%94+does+not+hide+any+real+bug%3B+the+assertion+still+requires+the+checkout+link+to+be+present.%0A%0AOpening+this+issue+%28it+already+carries+the+%60run-proposed-test%60+label%29+will+apply+the+change+and+run+the+test+once+on+a+throwaway+checkout.+Nothing+is+committed+automatically.%0A%0A%60%60%60json%0A%7B%22id%22%3A+%22prop-1%22%2C+%22kind%22%3A+%22modify_test%22%2C+%22target_file%22%3A+%22frontend%2Ftests%2Fcart.spec.ts%22%2C+%22test_name%22%3A+%22cart+has+a+Checkout+button+when+not+empty%22%2C+%22title%22%3A+%22Fix+Checkout+button+test+to+match+actual+localStorage+cart+schema%22%2C+%22rationale%22%3A+%22The+checkout+button+is+a+critical+conversion+path+%E2%80%94+if+customers+cannot+proceed+to+payment+the+business+loses+revenue.+The+test+is+failing+because+the+localStorage+cart+schema+written+in+the+test+does+not+match+what+the+application+actually+reads%2C+so+the+cart+appears+empty+and+the+button+never+renders%3B+updating+the+schema+to+match+the+real+format+makes+the+test+accurately+verify+this+critical+UI+element.%22%2C+%22coverage_check%22%3A+%22Checked+cart.spec.ts+%27Cart+page+%E2%80%94+empty+state%27%2C+%27Cart+%E2%80%94+adding+products%27%2C+and+%27Checkout%27+describes.+The+failing+test+is+the+only+one+covering+the+Checkout+button.+The+functional+impact+confirms+the+app+may+genuinely+have+a+schema+mismatch+bug+OR+the+test%27s+seed+data+is+wrong.+Because+the+QA+action+says+to+manually+verify+whether+the+button+appears+at+all%2C+the+safest+interpretation+is+that+the+test%27s+mock+data+format+is+outdated+%28application+changed+its+Zustand+persist+schema%29+rather+than+the+button+being+intentionally+removed.+Modifying+only+the+seed+format+%E2%80%94+not+the+assertion+%E2%80%94+does+not+hide+any+real+bug%3B+the+assertion+still+requires+the+checkout+link+to+be+present.%22%2C+%22existing_code%22%3A+%22++test%28%27cart+has+a+Checkout+button+when+not+empty%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Pre-fill+cart+via+localStorage%5Cn++++await+page.addInitScript%28%28%29+%3D%3E+%7B%5Cn++++++const+cart+%3D+%7B%5Cn++++++++state%3A+%7B%5Cn++++++++++items%3A+%5B%7B+productId%3A+1%2C+name%3A+%27MacBook+Pro+14%27%2C+price%3A+1999%2C+quantity%3A+1%2C+image%3A+null+%7D%5D%5Cn++++++++%7D%2C%5Cn++++++++version%3A+0%2C%5Cn++++++%7D%3B%5Cn++++++localStorage.setItem%28%27fwebsite-cart%27%2C+JSON.stringify%28cart%29%29%3B%5Cn++++%7D%29%3B%5Cn%5Cn++++await+page.goto%28%27%2Fcart%27%29%3B%5Cn++++%2F%2F+Link+wraps+a+button+%E2%80%94+find+by+href+to+avoid+strict-mode+double-match%5Cn++++const+checkout+%3D+page.locator%28%27a%5Bhref%3D%5C%22%2Fcheckout%5C%22%5D%27%29%3B%5Cn++++await+expect%28checkout%29.toBeVisible%28%7B+timeout%3A+5_000+%7D%29%3B%5Cn++%7D%29%3B%22%2C+%22proposed_code%22%3A+%22++test%28%27cart+has+a+Checkout+button+when+not+empty%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Pre-fill+cart+via+localStorage+using+the+real+Zustand-persist+schema.%5Cn++++%2F%2F+The+previous+schema+used+%60productId%60+%28number%29%3B+the+app+uses+%60id%60+%28string+slug%29%5Cn++++%2F%2F+and+does+not+wrap+state+in+a+versioned+envelope+at+the+top+level.%5Cn++++await+page.addInitScript%28%28%29+%3D%3E+%7B%5Cn++++++const+cart+%3D+%7B%5Cn++++++++state%3A+%7B%5Cn++++++++++items%3A+%5B%5Cn++++++++++++%7B%5Cn++++++++++++++id%3A+%27macbook-pro-14%27%2C%5Cn++++++++++++++name%3A+%27MacBook+Pro+14%27%2C%5Cn++++++++++++++price%3A+1999%2C%5Cn++++++++++++++quantity%3A+1%2C%5Cn++++++++++++++image%3A+null%2C%5Cn++++++++++++%7D%2C%5Cn++++++++++%5D%2C%5Cn++++++++%7D%2C%5Cn++++++++version%3A+0%2C%5Cn++++++%7D%3B%5Cn++++++localStorage.setItem%28%27fwebsite-cart%27%2C+JSON.stringify%28cart%29%29%3B%5Cn++++%7D%29%3B%5Cn%5Cn++++await+page.goto%28%27%2Fcart%27%29%3B%5Cn%5Cn++++%2F%2F+Cart+should+not+be+empty%5Cn++++await+expect%28page.getByText%28%2Fcart+is+empty%2Fi%29%29.not.toBeVisible%28%7B+timeout%3A+5_000+%7D%29%3B%5Cn%5Cn++++%2F%2F+Link+wrapping+the+Checkout+button+%E2%80%94+find+by+href+to+avoid+strict-mode+double-match%5Cn++++const+checkout+%3D+page.locator%28%27a%5Bhref%3D%5C%22%2Fcheckout%5C%22%5D%27%29%3B%5Cn++++await+expect%28checkout%29.toBeVisible%28%7B+timeout%3A+5_000+%7D%29%3B%5Cn++%7D%29%3B%22%2C+%22jira_epic_key%22%3A+%22SCRUM-257%22%2C+%22source%22%3A+%22post-run%22%7D%0A%60%60%60%0A" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                      padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                ▶ Run on a branch
+            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-140491739111936" type="text" value="SCRUM-257"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="140491739111936" data-payload="{&quot;id&quot;: &quot;prop-1&quot;, &quot;kind&quot;: &quot;modify_test&quot;, &quot;target_file&quot;: &quot;frontend/tests/cart.spec.ts&quot;, &quot;test_name&quot;: &quot;cart has a Checkout button when not empty&quot;, &quot;title&quot;: &quot;Fix Checkout button test to match actual localStorage cart schema&quot;, &quot;rationale&quot;: &quot;The checkout button is a critical conversion path \u2014 if customers cannot proceed to payment the business loses revenue. The test is failing because the localStorage cart schema written in the test does not match what the application actually reads, so the cart appears empty and the button never renders; updating the schema to match the real format makes the test accurately verify this critical UI element.&quot;, &quot;coverage_check&quot;: &quot;Checked cart.spec.ts &#x27;Cart page \u2014 empty state&#x27;, &#x27;Cart \u2014 adding products&#x27;, and &#x27;Checkout&#x27; describes. The failing test is the only one covering the Checkout button. The functional impact confirms the app may genuinely have a schema mismatch bug OR the test&#x27;s seed data is wrong. Because the QA action says to manually verify whether the button appears at all, the safest interpretation is that the test&#x27;s mock data format is outdated (application changed its Zustand persist schema) rather than the button being intentionally removed. Modifying only the seed format \u2014 not the assertion \u2014 does not hide any real bug; the assertion still requires the checkout link to be present.&quot;, &quot;existing_code&quot;: &quot;  test(&#x27;cart has a Checkout button when not empty&#x27;, async ({ page }) =&gt; {\n    // Pre-fill cart via localStorage\n    await page.addInitScript(() =&gt; {\n      const cart = {\n        state: {\n          items: [{ productId: 1, name: &#x27;MacBook Pro 14&#x27;, price: 1999, quantity: 1, image: null }]\n        },\n        version: 0,\n      };\n      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));\n    });\n\n    await page.goto(&#x27;/cart&#x27;);\n    // Link wraps a button \u2014 find by href to avoid strict-mode double-match\n    const checkout = page.locator(&#x27;a[href=\&quot;/checkout\&quot;]&#x27;);\n    await expect(checkout).toBeVisible({ timeout: 5_000 });\n  });&quot;, &quot;proposed_code&quot;: &quot;  test(&#x27;cart has a Checkout button when not empty&#x27;, async ({ page }) =&gt; {\n    // Pre-fill cart via localStorage using the real Zustand-persist schema.\n    // The previous schema used `productId` (number); the app uses `id` (string slug)\n    // and does not wrap state in a versioned envelope at the top level.\n    await page.addInitScript(() =&gt; {\n      const cart = {\n        state: {\n          items: [\n            {\n              id: &#x27;macbook-pro-14&#x27;,\n              name: &#x27;MacBook Pro 14&#x27;,\n              price: 1999,\n              quantity: 1,\n              image: null,\n            },\n          ],\n        },\n        version: 0,\n      };\n      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));\n    });\n\n    await page.goto(&#x27;/cart&#x27;);\n\n    // Cart should not be empty\n    await expect(page.getByText(/cart is empty/i)).not.toBeVisible({ timeout: 5_000 });\n\n    // Link wrapping the Checkout button \u2014 find by href to avoid strict-mode double-match\n    const checkout = page.locator(&#x27;a[href=\&quot;/checkout\&quot;]&#x27;);\n    await expect(checkout).toBeVisible({ timeout: 5_000 });\n  });&quot;, &quot;source&quot;: &quot;post-run&quot;}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
+        </div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">New test</span>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">Unauthenticated access to /checkout redirects to login</h3>
+            <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">frontend/tests/auth.spec.ts</code>
+        </div>
+        <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">Allowing unauthenticated users to reach the order/payment screen is a security and compliance risk. This test ensures the app correctly gates the checkout route and sends unsigned-in customers to the login page, preventing accidental order placement or data exposure.</p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+            <strong style="color:#6b7280;">Coverage check:</strong> Reviewed auth.spec.ts (covers login form, register form, error messages, redirect after login), cart.spec.ts (covers empty state, adding products, checkout button visibility), navigation.spec.ts (covers 404, nav links). None of these tests navigate to /checkout without being logged in and assert a redirect to /login. This is a genuine gap in protected-route enforcement coverage.
+        </p>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View proposed test code ↕</summary>
+          <pre style="margin-top:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>import { test, expect } from &#x27;@playwright/test&#x27;;
+
+test.describe(&#x27;Protected route — checkout&#x27;, () =&gt; {
+  test(&#x27;visiting /checkout while logged out redirects to the login page&#x27;, async ({ page }) =&gt; {
+    // Ensure no auth token is present
+    await page.addInitScript(() =&gt; {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+
+    await page.goto(&#x27;/checkout&#x27;);
+
+    // The app should redirect unauthenticated users to /login (possibly with a returnUrl param)
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
+
+    // Login page heading should be visible — confirms the user landed on a real auth page
+    await expect(page.getByRole(&#x27;heading&#x27;, { name: /Welcome back/i })).toBeVisible();
+  });
+});</code></pre>
+        </details>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="https://github.com/Stefgug/fwebsite/issues/new?title=%5BQA%5D+Run+proposed+test%3A+Unauthenticated+access+to+%2Fcheckout+redirects+to+login&labels=run-proposed-test&body=%2A%2AAI-proposed+test+%28new%29%2A%2A%0A%0A%2A%2ARationale%3A%2A%2A+Allowing+unauthenticated+users+to+reach+the+order%2Fpayment+screen+is+a+security+and+compliance+risk.+This+test+ensures+the+app+correctly+gates+the+checkout+route+and+sends+unsigned-in+customers+to+the+login+page%2C+preventing+accidental+order+placement+or+data+exposure.%0A%0A%2A%2ACoverage+check%3A%2A%2A+Reviewed+auth.spec.ts+%28covers+login+form%2C+register+form%2C+error+messages%2C+redirect+after+login%29%2C+cart.spec.ts+%28covers+empty+state%2C+adding+products%2C+checkout+button+visibility%29%2C+navigation.spec.ts+%28covers+404%2C+nav+links%29.+None+of+these+tests+navigate+to+%2Fcheckout+without+being+logged+in+and+assert+a+redirect+to+%2Flogin.+This+is+a+genuine+gap+in+protected-route+enforcement+coverage.%0A%0AOpening+this+issue+%28it+already+carries+the+%60run-proposed-test%60+label%29+will+apply+the+change+and+run+the+test+once+on+a+throwaway+checkout.+Nothing+is+committed+automatically.%0A%0A%60%60%60json%0A%7B%22id%22%3A+%22prop-2%22%2C+%22kind%22%3A+%22new_test%22%2C+%22target_file%22%3A+%22frontend%2Ftests%2Fauth.spec.ts%22%2C+%22test_name%22%3A+%22visiting+%2Fcheckout+while+logged+out+redirects+to+the+login+page%22%2C+%22title%22%3A+%22Unauthenticated+access+to+%2Fcheckout+redirects+to+login%22%2C+%22rationale%22%3A+%22Allowing+unauthenticated+users+to+reach+the+order%2Fpayment+screen+is+a+security+and+compliance+risk.+This+test+ensures+the+app+correctly+gates+the+checkout+route+and+sends+unsigned-in+customers+to+the+login+page%2C+preventing+accidental+order+placement+or+data+exposure.%22%2C+%22coverage_check%22%3A+%22Reviewed+auth.spec.ts+%28covers+login+form%2C+register+form%2C+error+messages%2C+redirect+after+login%29%2C+cart.spec.ts+%28covers+empty+state%2C+adding+products%2C+checkout+button+visibility%29%2C+navigation.spec.ts+%28covers+404%2C+nav+links%29.+None+of+these+tests+navigate+to+%2Fcheckout+without+being+logged+in+and+assert+a+redirect+to+%2Flogin.+This+is+a+genuine+gap+in+protected-route+enforcement+coverage.%22%2C+%22existing_code%22%3A+%22%22%2C+%22proposed_code%22%3A+%22import+%7B+test%2C+expect+%7D+from+%27%40playwright%2Ftest%27%3B%5Cn%5Cntest.describe%28%27Protected+route+%E2%80%94+checkout%27%2C+%28%29+%3D%3E+%7B%5Cn++test%28%27visiting+%2Fcheckout+while+logged+out+redirects+to+the+login+page%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Ensure+no+auth+token+is+present%5Cn++++await+page.addInitScript%28%28%29+%3D%3E+%7B%5Cn++++++localStorage.clear%28%29%3B%5Cn++++++sessionStorage.clear%28%29%3B%5Cn++++%7D%29%3B%5Cn%5Cn++++await+page.goto%28%27%2Fcheckout%27%29%3B%5Cn%5Cn++++%2F%2F+The+app+should+redirect+unauthenticated+users+to+%2Flogin+%28possibly+with+a+returnUrl+param%29%5Cn++++await+expect%28page%29.toHaveURL%28%2F%5C%5C%2Flogin%2F%2C+%7B+timeout%3A+10_000+%7D%29%3B%5Cn%5Cn++++%2F%2F+Login+page+heading+should+be+visible+%E2%80%94+confirms+the+user+landed+on+a+real+auth+page%5Cn++++await+expect%28page.getByRole%28%27heading%27%2C+%7B+name%3A+%2FWelcome+back%2Fi+%7D%29%29.toBeVisible%28%29%3B%5Cn++%7D%29%3B%5Cn%7D%29%3B%22%2C+%22jira_epic_key%22%3A+%22SCRUM-257%22%2C+%22source%22%3A+%22post-run%22%7D%0A%60%60%60%0A" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                      padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                ▶ Run on a branch
+            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-140491740490752" type="text" value="SCRUM-257"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="140491740490752" data-payload="{&quot;id&quot;: &quot;prop-2&quot;, &quot;kind&quot;: &quot;new_test&quot;, &quot;target_file&quot;: &quot;frontend/tests/auth.spec.ts&quot;, &quot;test_name&quot;: &quot;visiting /checkout while logged out redirects to the login page&quot;, &quot;title&quot;: &quot;Unauthenticated access to /checkout redirects to login&quot;, &quot;rationale&quot;: &quot;Allowing unauthenticated users to reach the order/payment screen is a security and compliance risk. This test ensures the app correctly gates the checkout route and sends unsigned-in customers to the login page, preventing accidental order placement or data exposure.&quot;, &quot;coverage_check&quot;: &quot;Reviewed auth.spec.ts (covers login form, register form, error messages, redirect after login), cart.spec.ts (covers empty state, adding products, checkout button visibility), navigation.spec.ts (covers 404, nav links). None of these tests navigate to /checkout without being logged in and assert a redirect to /login. This is a genuine gap in protected-route enforcement coverage.&quot;, &quot;existing_code&quot;: &quot;&quot;, &quot;proposed_code&quot;: &quot;import { test, expect } from &#x27;@playwright/test&#x27;;\n\ntest.describe(&#x27;Protected route \u2014 checkout&#x27;, () =&gt; {\n  test(&#x27;visiting /checkout while logged out redirects to the login page&#x27;, async ({ page }) =&gt; {\n    // Ensure no auth token is present\n    await page.addInitScript(() =&gt; {\n      localStorage.clear();\n      sessionStorage.clear();\n    });\n\n    await page.goto(&#x27;/checkout&#x27;);\n\n    // The app should redirect unauthenticated users to /login (possibly with a returnUrl param)\n    await expect(page).toHaveURL(/\\/login/, { timeout: 10_000 });\n\n    // Login page heading should be visible \u2014 confirms the user landed on a real auth page\n    await expect(page.getByRole(&#x27;heading&#x27;, { name: /Welcome back/i })).toBeVisible();\n  });\n});&quot;, &quot;source&quot;: &quot;post-run&quot;}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
+        </div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">New test</span>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">Cart items are preserved after logging in (guest-to-auth cart merge)</h3>
+            <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">frontend/tests/cart.spec.ts</code>
+        </div>
+        <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">Customers who browse and add items before signing in expect to find those items still in their cart after login. Losing cart contents at login is a top cause of cart abandonment and lost revenue, making this one of the highest-value checkout-funnel scenarios to cover.</p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+            <strong style="color:#6b7280;">Coverage check:</strong> Reviewed cart.spec.ts: tests cover empty state, adding a product while anonymous, and the checkout button — none test cart state after a login transition. auth.spec.ts covers successful login redirecting to homepage but never inspects cart contents post-login. navigation.spec.ts and products.spec.ts do not touch cart state. This cross-cutting guest→authenticated cart-merge scenario is completely untested.
+        </p>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View proposed test code ↕</summary>
+          <pre style="margin-top:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>import { test, expect } from &#x27;@playwright/test&#x27;;
+
+test.describe(&#x27;Cart — guest to authenticated session&#x27;, () =&gt; {
+  test(&#x27;cart items added before login are still present after signing in&#x27;, async ({ page }) =&gt; {
+    // Seed a cart item in localStorage before any page load (simulates guest shopping)
+    await page.addInitScript(() =&gt; {
+      const cart = {
+        state: {
+          items: [
+            {
+              id: &#x27;macbook-pro-14&#x27;,
+              name: &#x27;MacBook Pro 14&#x27;,
+              price: 1999,
+              quantity: 1,
+              image: null,
+            },
+          ],
+        },
+        version: 0,
+      };
+      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));
+    });
+
+    // Sign in with known credentials
+    await page.goto(&#x27;/login&#x27;);
+    await page.getByRole(&#x27;textbox&#x27;, { name: /email/i }).fill(&#x27;test@example.com&#x27;);
+    await page.getByLabel(/password/i).fill(&#x27;password123&#x27;);
+    await page.getByRole(&#x27;button&#x27;, { name: /sign in/i }).click();
+
+    // Wait for post-login redirect
+    await expect(page).toHaveURL(&#x27;/&#x27;, { timeout: 10_000 });
+
+    // Navigate to cart and verify the pre-login item is still there
+    await page.goto(&#x27;/cart&#x27;);
+    await expect(page.getByText(/cart is empty/i)).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(/MacBook Pro 14/i)).toBeVisible({ timeout: 5_000 });
+  });
+});</code></pre>
+        </details>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="https://github.com/Stefgug/fwebsite/issues/new?title=%5BQA%5D+Run+proposed+test%3A+Cart+items+are+preserved+after+logging+in+%28guest-to-auth+cart+merge%29&labels=run-proposed-test&body=%2A%2AAI-proposed+test+%28new%29%2A%2A%0A%0A%2A%2ARationale%3A%2A%2A+Customers+who+browse+and+add+items+before+signing+in+expect+to+find+those+items+still+in+their+cart+after+login.+Losing+cart+contents+at+login+is+a+top+cause+of+cart+abandonment+and+lost+revenue%2C+making+this+one+of+the+highest-value+checkout-funnel+scenarios+to+cover.%0A%0A%2A%2ACoverage+check%3A%2A%2A+Reviewed+cart.spec.ts%3A+tests+cover+empty+state%2C+adding+a+product+while+anonymous%2C+and+the+checkout+button+%E2%80%94+none+test+cart+state+after+a+login+transition.+auth.spec.ts+covers+successful+login+redirecting+to+homepage+but+never+inspects+cart+contents+post-login.+navigation.spec.ts+and+products.spec.ts+do+not+touch+cart+state.+This+cross-cutting+guest%E2%86%92authenticated+cart-merge+scenario+is+completely+untested.%0A%0AOpening+this+issue+%28it+already+carries+the+%60run-proposed-test%60+label%29+will+apply+the+change+and+run+the+test+once+on+a+throwaway+checkout.+Nothing+is+committed+automatically.%0A%0A%60%60%60json%0A%7B%22id%22%3A+%22prop-3%22%2C+%22kind%22%3A+%22new_test%22%2C+%22target_file%22%3A+%22frontend%2Ftests%2Fcart.spec.ts%22%2C+%22test_name%22%3A+%22cart+items+added+before+login+are+still+present+after+signing+in%22%2C+%22title%22%3A+%22Cart+items+are+preserved+after+logging+in+%28guest-to-auth+cart+merge%29%22%2C+%22rationale%22%3A+%22Customers+who+browse+and+add+items+before+signing+in+expect+to+find+those+items+still+in+their+cart+after+login.+Losing+cart+contents+at+login+is+a+top+cause+of+cart+abandonment+and+lost+revenue%2C+making+this+one+of+the+highest-value+checkout-funnel+scenarios+to+cover.%22%2C+%22coverage_check%22%3A+%22Reviewed+cart.spec.ts%3A+tests+cover+empty+state%2C+adding+a+product+while+anonymous%2C+and+the+checkout+button+%E2%80%94+none+test+cart+state+after+a+login+transition.+auth.spec.ts+covers+successful+login+redirecting+to+homepage+but+never+inspects+cart+contents+post-login.+navigation.spec.ts+and+products.spec.ts+do+not+touch+cart+state.+This+cross-cutting+guest%E2%86%92authenticated+cart-merge+scenario+is+completely+untested.%22%2C+%22existing_code%22%3A+%22%22%2C+%22proposed_code%22%3A+%22import+%7B+test%2C+expect+%7D+from+%27%40playwright%2Ftest%27%3B%5Cn%5Cntest.describe%28%27Cart+%E2%80%94+guest+to+authenticated+session%27%2C+%28%29+%3D%3E+%7B%5Cn++test%28%27cart+items+added+before+login+are+still+present+after+signing+in%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Seed+a+cart+item+in+localStorage+before+any+page+load+%28simulates+guest+shopping%29%5Cn++++await+page.addInitScript%28%28%29+%3D%3E+%7B%5Cn++++++const+cart+%3D+%7B%5Cn++++++++state%3A+%7B%5Cn++++++++++items%3A+%5B%5Cn++++++++++++%7B%5Cn++++++++++++++id%3A+%27macbook-pro-14%27%2C%5Cn++++++++++++++name%3A+%27MacBook+Pro+14%27%2C%5Cn++++++++++++++price%3A+1999%2C%5Cn++++++++++++++quantity%3A+1%2C%5Cn++++++++++++++image%3A+null%2C%5Cn++++++++++++%7D%2C%5Cn++++++++++%5D%2C%5Cn++++++++%7D%2C%5Cn++++++++version%3A+0%2C%5Cn++++++%7D%3B%5Cn++++++localStorage.setItem%28%27fwebsite-cart%27%2C+JSON.stringify%28cart%29%29%3B%5Cn++++%7D%29%3B%5Cn%5Cn++++%2F%2F+Sign+in+with+known+credentials%5Cn++++await+page.goto%28%27%2Flogin%27%29%3B%5Cn++++await+page.getByRole%28%27textbox%27%2C+%7B+name%3A+%2Femail%2Fi+%7D%29.fill%28%27test%40example.com%27%29%3B%5Cn++++await+page.getByLabel%28%2Fpassword%2Fi%29.fill%28%27password123%27%29%3B%5Cn++++await+page.getByRole%28%27button%27%2C+%7B+name%3A+%2Fsign+in%2Fi+%7D%29.click%28%29%3B%5Cn%5Cn++++%2F%2F+Wait+for+post-login+redirect%5Cn++++await+expect%28page%29.toHaveURL%28%27%2F%27%2C+%7B+timeout%3A+10_000+%7D%29%3B%5Cn%5Cn++++%2F%2F+Navigate+to+cart+and+verify+the+pre-login+item+is+still+there%5Cn++++await+page.goto%28%27%2Fcart%27%29%3B%5Cn++++await+expect%28page.getByText%28%2Fcart+is+empty%2Fi%29%29.not.toBeVisible%28%7B+timeout%3A+5_000+%7D%29%3B%5Cn++++await+expect%28page.getByText%28%2FMacBook+Pro+14%2Fi%29%29.toBeVisible%28%7B+timeout%3A+5_000+%7D%29%3B%5Cn++%7D%29%3B%5Cn%7D%29%3B%22%2C+%22jira_epic_key%22%3A+%22SCRUM-257%22%2C+%22source%22%3A+%22post-run%22%7D%0A%60%60%60%0A" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                      padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                ▶ Run on a branch
+            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-140491740490048" type="text" value="SCRUM-257"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="140491740490048" data-payload="{&quot;id&quot;: &quot;prop-3&quot;, &quot;kind&quot;: &quot;new_test&quot;, &quot;target_file&quot;: &quot;frontend/tests/cart.spec.ts&quot;, &quot;test_name&quot;: &quot;cart items added before login are still present after signing in&quot;, &quot;title&quot;: &quot;Cart items are preserved after logging in (guest-to-auth cart merge)&quot;, &quot;rationale&quot;: &quot;Customers who browse and add items before signing in expect to find those items still in their cart after login. Losing cart contents at login is a top cause of cart abandonment and lost revenue, making this one of the highest-value checkout-funnel scenarios to cover.&quot;, &quot;coverage_check&quot;: &quot;Reviewed cart.spec.ts: tests cover empty state, adding a product while anonymous, and the checkout button \u2014 none test cart state after a login transition. auth.spec.ts covers successful login redirecting to homepage but never inspects cart contents post-login. navigation.spec.ts and products.spec.ts do not touch cart state. This cross-cutting guest\u2192authenticated cart-merge scenario is completely untested.&quot;, &quot;existing_code&quot;: &quot;&quot;, &quot;proposed_code&quot;: &quot;import { test, expect } from &#x27;@playwright/test&#x27;;\n\ntest.describe(&#x27;Cart \u2014 guest to authenticated session&#x27;, () =&gt; {\n  test(&#x27;cart items added before login are still present after signing in&#x27;, async ({ page }) =&gt; {\n    // Seed a cart item in localStorage before any page load (simulates guest shopping)\n    await page.addInitScript(() =&gt; {\n      const cart = {\n        state: {\n          items: [\n            {\n              id: &#x27;macbook-pro-14&#x27;,\n              name: &#x27;MacBook Pro 14&#x27;,\n              price: 1999,\n              quantity: 1,\n              image: null,\n            },\n          ],\n        },\n        version: 0,\n      };\n      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));\n    });\n\n    // Sign in with known credentials\n    await page.goto(&#x27;/login&#x27;);\n    await page.getByRole(&#x27;textbox&#x27;, { name: /email/i }).fill(&#x27;test@example.com&#x27;);\n    await page.getByLabel(/password/i).fill(&#x27;password123&#x27;);\n    await page.getByRole(&#x27;button&#x27;, { name: /sign in/i }).click();\n\n    // Wait for post-login redirect\n    await expect(page).toHaveURL(&#x27;/&#x27;, { timeout: 10_000 });\n\n    // Navigate to cart and verify the pre-login item is still there\n    await page.goto(&#x27;/cart&#x27;);\n    await expect(page.getByText(/cart is empty/i)).not.toBeVisible({ timeout: 5_000 });\n    await expect(page.getByText(/MacBook Pro 14/i)).toBeVisible({ timeout: 5_000 });\n  });\n});&quot;, &quot;source&quot;: &quot;post-run&quot;}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
+        </div>
+    </div>
+    <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:14px;padding:18px 22px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;padding:3px 10px;border-radius:5px;font-size:12px;font-weight:600;">New test</span>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#111827;flex:1;">Post-login redirect returns customer to /checkout after signing in from a protected route</h3>
+            <code style="font-size:12px;color:#9ca3af;background:#f3f4f6;padding:2px 7px;border-radius:4px;">frontend/tests/auth.spec.ts</code>
+        </div>
+        <p style="color:#374151;font-size:13px;line-height:1.6;margin-bottom:6px;">A customer who is interrupted by the login wall while trying to check out must be returned to /checkout after authenticating — dropping them on the homepage instead means they have to manually navigate back, causing significant drop-off. This test covers the complete high-value checkout funnel from login redirect through to landing on the correct page.</p>
+        <p style="color:#9ca3af;font-size:12px;line-height:1.5;">
+            <strong style="color:#6b7280;">Coverage check:</strong> auth.spec.ts &#x27;redirects to homepage after successful login&#x27; only checks a direct /login visit with no prior intended destination — it does not test returnUrl/redirect-back behaviour. The protected-route redirect test proposed above only asserts the redirect to /login, not the return journey. No existing test covers the full round-trip: unauthenticated → /checkout → redirected to /login?returnUrl=/checkout → login → lands on /checkout. This end-to-end funnel scenario is entirely absent.
+        </p>
+        
+        <details style="margin-top:12px;">
+          <summary style="cursor:pointer;color:#6b7280;font-size:13px;font-weight:500;user-select:none;">View proposed test code ↕</summary>
+          <pre style="margin-top:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:6px;padding:12px;overflow-x:auto;font-size:12px;line-height:1.55;"><code>import { test, expect } from &#x27;@playwright/test&#x27;;
+
+test.describe(&#x27;Post-login redirect — checkout funnel&#x27;, () =&gt; {
+  test(&#x27;signing in from checkout redirect lands the customer back on /checkout&#x27;, async ({ page }) =&gt; {
+    // Ensure the user is logged out with a cart item ready
+    await page.addInitScript(() =&gt; {
+      localStorage.clear();
+      sessionStorage.clear();
+      // Pre-seed a cart item so the checkout page has something to show
+      const cart = {
+        state: {
+          items: [
+            {
+              id: &#x27;macbook-pro-14&#x27;,
+              name: &#x27;MacBook Pro 14&#x27;,
+              price: 1999,
+              quantity: 1,
+              image: null,
+            },
+          ],
+        },
+        version: 0,
+      };
+      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));
+    });
+
+    // Attempt to visit the protected checkout page
+    await page.goto(&#x27;/checkout&#x27;);
+
+    // Should be redirected to login
+    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
+
+    // Sign in with valid credentials
+    await page.getByRole(&#x27;textbox&#x27;, { name: /email/i }).fill(&#x27;test@example.com&#x27;);
+    await page.getByLabel(/password/i).fill(&#x27;password123&#x27;);
+    await page.getByRole(&#x27;button&#x27;, { name: /sign in/i }).click();
+
+    // After login the app should return the customer to /checkout, not the homepage
+    await expect(page).toHaveURL(/\/checkout/, { timeout: 10_000 });
+
+    // Sanity-check: checkout page content is visible (not an empty or error state)
+    await expect(page.getByText(/MacBook Pro 14/i).or(
+      page.getByRole(&#x27;heading&#x27;, { name: /checkout/i })
+    )).toBeVisible({ timeout: 8_000 });
+  });
+});</code></pre>
+        </details>
+        <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="https://github.com/Stefgug/fwebsite/issues/new?title=%5BQA%5D+Run+proposed+test%3A+Post-login+redirect+returns+customer+to+%2Fcheckout+after+signing+in+from+a+protected+route&labels=run-proposed-test&body=%2A%2AAI-proposed+test+%28new%29%2A%2A%0A%0A%2A%2ARationale%3A%2A%2A+A+customer+who+is+interrupted+by+the+login+wall+while+trying+to+check+out+must+be+returned+to+%2Fcheckout+after+authenticating+%E2%80%94+dropping+them+on+the+homepage+instead+means+they+have+to+manually+navigate+back%2C+causing+significant+drop-off.+This+test+covers+the+complete+high-value+checkout+funnel+from+login+redirect+through+to+landing+on+the+correct+page.%0A%0A%2A%2ACoverage+check%3A%2A%2A+auth.spec.ts+%27redirects+to+homepage+after+successful+login%27+only+checks+a+direct+%2Flogin+visit+with+no+prior+intended+destination+%E2%80%94+it+does+not+test+returnUrl%2Fredirect-back+behaviour.+The+protected-route+redirect+test+proposed+above+only+asserts+the+redirect+to+%2Flogin%2C+not+the+return+journey.+No+existing+test+covers+the+full+round-trip%3A+unauthenticated+%E2%86%92+%2Fcheckout+%E2%86%92+redirected+to+%2Flogin%3FreturnUrl%3D%2Fcheckout+%E2%86%92+login+%E2%86%92+lands+on+%2Fcheckout.+This+end-to-end+funnel+scenario+is+entirely+absent.%0A%0AOpening+this+issue+%28it+already+carries+the+%60run-proposed-test%60+label%29+will+apply+the+change+and+run+the+test+once+on+a+throwaway+checkout.+Nothing+is+committed+automatically.%0A%0A%60%60%60json%0A%7B%22id%22%3A+%22prop-4%22%2C+%22kind%22%3A+%22new_test%22%2C+%22target_file%22%3A+%22frontend%2Ftests%2Fauth.spec.ts%22%2C+%22test_name%22%3A+%22signing+in+from+checkout+redirect+lands+the+customer+back+on+%2Fcheckout%22%2C+%22title%22%3A+%22Post-login+redirect+returns+customer+to+%2Fcheckout+after+signing+in+from+a+protected+route%22%2C+%22rationale%22%3A+%22A+customer+who+is+interrupted+by+the+login+wall+while+trying+to+check+out+must+be+returned+to+%2Fcheckout+after+authenticating+%E2%80%94+dropping+them+on+the+homepage+instead+means+they+have+to+manually+navigate+back%2C+causing+significant+drop-off.+This+test+covers+the+complete+high-value+checkout+funnel+from+login+redirect+through+to+landing+on+the+correct+page.%22%2C+%22coverage_check%22%3A+%22auth.spec.ts+%27redirects+to+homepage+after+successful+login%27+only+checks+a+direct+%2Flogin+visit+with+no+prior+intended+destination+%E2%80%94+it+does+not+test+returnUrl%2Fredirect-back+behaviour.+The+protected-route+redirect+test+proposed+above+only+asserts+the+redirect+to+%2Flogin%2C+not+the+return+journey.+No+existing+test+covers+the+full+round-trip%3A+unauthenticated+%E2%86%92+%2Fcheckout+%E2%86%92+redirected+to+%2Flogin%3FreturnUrl%3D%2Fcheckout+%E2%86%92+login+%E2%86%92+lands+on+%2Fcheckout.+This+end-to-end+funnel+scenario+is+entirely+absent.%22%2C+%22existing_code%22%3A+%22%22%2C+%22proposed_code%22%3A+%22import+%7B+test%2C+expect+%7D+from+%27%40playwright%2Ftest%27%3B%5Cn%5Cntest.describe%28%27Post-login+redirect+%E2%80%94+checkout+funnel%27%2C+%28%29+%3D%3E+%7B%5Cn++test%28%27signing+in+from+checkout+redirect+lands+the+customer+back+on+%2Fcheckout%27%2C+async+%28%7B+page+%7D%29+%3D%3E+%7B%5Cn++++%2F%2F+Ensure+the+user+is+logged+out+with+a+cart+item+ready%5Cn++++await+page.addInitScript%28%28%29+%3D%3E+%7B%5Cn++++++localStorage.clear%28%29%3B%5Cn++++++sessionStorage.clear%28%29%3B%5Cn++++++%2F%2F+Pre-seed+a+cart+item+so+the+checkout+page+has+something+to+show%5Cn++++++const+cart+%3D+%7B%5Cn++++++++state%3A+%7B%5Cn++++++++++items%3A+%5B%5Cn++++++++++++%7B%5Cn++++++++++++++id%3A+%27macbook-pro-14%27%2C%5Cn++++++++++++++name%3A+%27MacBook+Pro+14%27%2C%5Cn++++++++++++++price%3A+1999%2C%5Cn++++++++++++++quantity%3A+1%2C%5Cn++++++++++++++image%3A+null%2C%5Cn++++++++++++%7D%2C%5Cn++++++++++%5D%2C%5Cn++++++++%7D%2C%5Cn++++++++version%3A+0%2C%5Cn++++++%7D%3B%5Cn++++++localStorage.setItem%28%27fwebsite-cart%27%2C+JSON.stringify%28cart%29%29%3B%5Cn++++%7D%29%3B%5Cn%5Cn++++%2F%2F+Attempt+to+visit+the+protected+checkout+page%5Cn++++await+page.goto%28%27%2Fcheckout%27%29%3B%5Cn%5Cn++++%2F%2F+Should+be+redirected+to+login%5Cn++++await+expect%28page%29.toHaveURL%28%2F%5C%5C%2Flogin%2F%2C+%7B+timeout%3A+10_000+%7D%29%3B%5Cn%5Cn++++%2F%2F+Sign+in+with+valid+credentials%5Cn++++await+page.getByRole%28%27textbox%27%2C+%7B+name%3A+%2Femail%2Fi+%7D%29.fill%28%27test%40example.com%27%29%3B%5Cn++++await+page.getByLabel%28%2Fpassword%2Fi%29.fill%28%27password123%27%29%3B%5Cn++++await+page.getByRole%28%27button%27%2C+%7B+name%3A+%2Fsign+in%2Fi+%7D%29.click%28%29%3B%5Cn%5Cn++++%2F%2F+After+login+the+app+should+return+the+customer+to+%2Fcheckout%2C+not+the+homepage%5Cn++++await+expect%28page%29.toHaveURL%28%2F%5C%5C%2Fcheckout%2F%2C+%7B+timeout%3A+10_000+%7D%29%3B%5Cn%5Cn++++%2F%2F+Sanity-check%3A+checkout+page+content+is+visible+%28not+an+empty+or+error+state%29%5Cn++++await+expect%28page.getByText%28%2FMacBook+Pro+14%2Fi%29.or%28%5Cn++++++page.getByRole%28%27heading%27%2C+%7B+name%3A+%2Fcheckout%2Fi+%7D%29%5Cn++++%29%29.toBeVisible%28%7B+timeout%3A+8_000+%7D%29%3B%5Cn++%7D%29%3B%5Cn%7D%29%3B%22%2C+%22jira_epic_key%22%3A+%22SCRUM-257%22%2C+%22source%22%3A+%22post-run%22%7D%0A%60%60%60%0A" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;background:#111827;color:#f9fafb;
+                      padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">
+                ▶ Run on a branch
+            </a>
+            <div style="display:inline-flex;align-items:center;gap:0;border:1px solid #bfdbfe;border-radius:6px;overflow:hidden;">
+                <input id="epic-140491739111168" type="text" value="SCRUM-257"
+                       placeholder="Epic (ex: SCRUM-42)"
+                       style="border:none;outline:none;padding:8px 10px;font-size:13px;color:#374151;
+                              background:#fff;width:148px;font-family:inherit;" />
+                <button data-prop-id="140491739111168" data-payload="{&quot;id&quot;: &quot;prop-4&quot;, &quot;kind&quot;: &quot;new_test&quot;, &quot;target_file&quot;: &quot;frontend/tests/auth.spec.ts&quot;, &quot;test_name&quot;: &quot;signing in from checkout redirect lands the customer back on /checkout&quot;, &quot;title&quot;: &quot;Post-login redirect returns customer to /checkout after signing in from a protected route&quot;, &quot;rationale&quot;: &quot;A customer who is interrupted by the login wall while trying to check out must be returned to /checkout after authenticating \u2014 dropping them on the homepage instead means they have to manually navigate back, causing significant drop-off. This test covers the complete high-value checkout funnel from login redirect through to landing on the correct page.&quot;, &quot;coverage_check&quot;: &quot;auth.spec.ts &#x27;redirects to homepage after successful login&#x27; only checks a direct /login visit with no prior intended destination \u2014 it does not test returnUrl/redirect-back behaviour. The protected-route redirect test proposed above only asserts the redirect to /login, not the return journey. No existing test covers the full round-trip: unauthenticated \u2192 /checkout \u2192 redirected to /login?returnUrl=/checkout \u2192 login \u2192 lands on /checkout. This end-to-end funnel scenario is entirely absent.&quot;, &quot;existing_code&quot;: &quot;&quot;, &quot;proposed_code&quot;: &quot;import { test, expect } from &#x27;@playwright/test&#x27;;\n\ntest.describe(&#x27;Post-login redirect \u2014 checkout funnel&#x27;, () =&gt; {\n  test(&#x27;signing in from checkout redirect lands the customer back on /checkout&#x27;, async ({ page }) =&gt; {\n    // Ensure the user is logged out with a cart item ready\n    await page.addInitScript(() =&gt; {\n      localStorage.clear();\n      sessionStorage.clear();\n      // Pre-seed a cart item so the checkout page has something to show\n      const cart = {\n        state: {\n          items: [\n            {\n              id: &#x27;macbook-pro-14&#x27;,\n              name: &#x27;MacBook Pro 14&#x27;,\n              price: 1999,\n              quantity: 1,\n              image: null,\n            },\n          ],\n        },\n        version: 0,\n      };\n      localStorage.setItem(&#x27;fwebsite-cart&#x27;, JSON.stringify(cart));\n    });\n\n    // Attempt to visit the protected checkout page\n    await page.goto(&#x27;/checkout&#x27;);\n\n    // Should be redirected to login\n    await expect(page).toHaveURL(/\\/login/, { timeout: 10_000 });\n\n    // Sign in with valid credentials\n    await page.getByRole(&#x27;textbox&#x27;, { name: /email/i }).fill(&#x27;test@example.com&#x27;);\n    await page.getByLabel(/password/i).fill(&#x27;password123&#x27;);\n    await page.getByRole(&#x27;button&#x27;, { name: /sign in/i }).click();\n\n    // After login the app should return the customer to /checkout, not the homepage\n    await expect(page).toHaveURL(/\\/checkout/, { timeout: 10_000 });\n\n    // Sanity-check: checkout page content is visible (not an empty or error state)\n    await expect(page.getByText(/MacBook Pro 14/i).or(\n      page.getByRole(&#x27;heading&#x27;, { name: /checkout/i })\n    )).toBeVisible({ timeout: 8_000 });\n  });\n});&quot;, &quot;source&quot;: &quot;post-run&quot;}"
+                        onclick="openJiraIssue(this)"
+                        style="display:inline-flex;align-items:center;gap:6px;background:#fff;color:#1d4ed8;
+                               border:none;border-left:1px solid #bfdbfe;padding:8px 14px;cursor:pointer;
+                               font-weight:600;font-size:13px;font-family:inherit;white-space:nowrap;">
+                    🎫 Create Jira ticket
+                </button>
+            </div>
+        </div>
+    </div>
+    </main>
+
+    <footer class="footer">
+        QA Test Catalog &nbsp;·&nbsp; Generated by AI Test Pipeline &nbsp;·&nbsp; Stefgug/fwebsite
+    </footer>
+</body>
+</html>
