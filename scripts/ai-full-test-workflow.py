@@ -495,10 +495,12 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
         {coverage_bar(cov['lines_pct'])}
     </div>"""
 
+    e2e_pass = pw.get('failed', 0) == 0 and pw.get('total', 0) > 0
+    e2e_detail = f"{pw['passed']} / {pw['total']} passed" + ('' if pw.get('failed', 0) == 0 else f", {pw.get('failed', 0)} failed")
     e2e_card = f"""<div class="card">
         <div class="card-title">E2E Tests (Playwright)</div>
-        <div class="card-badge {'badge-pass' if E2E_OUTCOME == 'success' else 'badge-fail'}">{'✅ PASS' if E2E_OUTCOME == 'success' else '❌ FAIL'}</div>
-        <div class="card-detail">{pw['passed']} / {pw['total']} passed</div>
+        <div class="card-badge {'badge-pass' if e2e_pass else 'badge-fail'}">{'✅ PASS' if e2e_pass else '❌ FAIL'}</div>
+        <div class="card-detail">{e2e_detail}</div>
     </div>"""
 
     # Failing tests table
@@ -584,7 +586,7 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
 <body>
   <div class="header">
     <h1>QA Test Dashboard</h1>
-    <div class="subtitle">Run: {html.escape(RUN_TIMESTAMP)} · Epic: {html.escape(JIRA_EPIC_KEY)}</div>
+    <div class="subtitle">Run: {html.escape(RUN_TIMESTAMP)} · Epic: <a href="{html.escape(JIRA_BASE_URL)}/browse/{html.escape(JIRA_EPIC_KEY)}" target="_blank" style="color:#7aa2f7;">{html.escape(JIRA_EPIC_KEY)}</a></div>
   </div>
 
   <div class="container">
@@ -1006,7 +1008,7 @@ def generate_catalog_html(pw_results: dict, triage: dict | None = None, jira_bug
             </div>
             <h1 style="font-size:28px;font-weight:700;margin-bottom:6px;">📋 Test Catalog</h1>
             <div style="color:#a0aec0;font-size:14px;">
-                Epic: <strong style="color:#e2e8f0;">{JIRA_EPIC_KEY} — {JIRA_EPIC_TITLE}</strong>
+                Epic: <a href="{JIRA_BASE_URL}/browse/{JIRA_EPIC_KEY}" target="_blank" style="color:#7aa2f7;text-decoration:none;"><strong>{JIRA_EPIC_KEY}</strong></a> <strong style="color:#e2e8f0;">— {JIRA_EPIC_TITLE}</strong>
                 &nbsp;·&nbsp; Run: <code style="color:#e2e8f0;">{GITHUB_RUN_ID}</code>
                 &nbsp;·&nbsp; {RUN_TIMESTAMP}
             </div>
