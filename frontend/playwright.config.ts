@@ -13,7 +13,9 @@ export default defineConfig({
   testMatch: '**/*.spec.ts',
   timeout: fastServer ? 60_000 : 30_000,
   retries: isCI ? 1 : 0,
-  workers: isCI ? 1 : undefined,
+  // Parallel workers cut wall-clock roughly a third; kept conservative in CI
+  // because a flaky demo run costs far more than the seconds it would save.
+  workers: isCI ? 2 : undefined,
   reporter: isCI
     ? [['json', { outputFile: 'test-results/results.json' }], ['html', { open: 'never' }], ['list']]
     : [['html', { open: 'on-failure' }], ['list']],
