@@ -2,18 +2,18 @@ import type { Core } from '@strapi/strapi';
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Admin => ({
   auth: {
-    secret: env('ADMIN_JWT_SECRET'),
+    secret: env('ADMIN_JWT_SECRET', 'local-admin-jwt-secret'),
   },
   apiToken: {
-    salt: env('API_TOKEN_SALT'),
+    salt: env('API_TOKEN_SALT', 'local-api-token-salt'),
   },
   transfer: {
     token: {
-      salt: env('TRANSFER_TOKEN_SALT'),
+      salt: env('TRANSFER_TOKEN_SALT', 'local-transfer-token-salt'),
     },
   },
   secrets: {
-    encryptionKey: env('ENCRYPTION_KEY'),
+    encryptionKey: env('ENCRYPTION_KEY', 'local-encryption-key-32-characters'),
   },
   flags: {
     nps: env.bool('FLAG_NPS', true),

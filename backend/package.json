@@ -4,6 +4,11 @@
   "private": true,
   "description": "A Strapi application",
   "scripts": {
+    "ensure:deps": "node -e \"const fs=require('node:fs');if(fs.existsSync('node_modules/@strapi/strapi/package.json')){process.exit(0)}console.log('Installing backend dependencies...');process.exit(1)\" || npm install --no-audit --no-fund",
+    "prebuild": "npm run ensure:deps",
+    "predev": "npm run ensure:deps",
+    "predevelop": "npm run ensure:deps",
+    "prestart": "npm run ensure:deps",
     "build": "strapi build",
     "console": "strapi console",
     "deploy": "strapi deploy",

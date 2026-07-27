@@ -1,5 +1,5 @@
-# Terminal 1 (depuis backend/)
-npm run build && npm run start
-
-# Terminal 2 (depuis frontend/)
+# Depuis la racine fwebsite/
 npm run dev
+
+# Vérifier le backend seul
+npm --prefix backend run build
