@@ -234,10 +234,61 @@ async function seedData(strapi: Core.Strapi) {
   strapi.log.info('[seed] Seed complete!');
 }
 
+async function ensurePublicPermissions(strapi: Core.Strapi) {
+  const publicRole = await strapi.db
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'public' } });
+
+  if (!publicRole) {
+    strapi.log.warn('[permissions] Public role not found, skipping permission bootstrap.');
+    return;
+  }
+
+  const requiredActions = [
+    'api::product.product.find',
+    'api::product.product.findOne',
+    'api::category.category.find',
+    'api::category.category.findOne',
+    'api::article.article.find',
+    'api::article.article.findOne',
+    'api::tag.tag.find',
+    'api::tag.tag.findOne',
+    'api::contact.contact.create',
+  ];
+
+  const existingPermissions = await strapi.db
+    .query('plugin::users-permissions.permission')
+    .findMany({
+      where: {
+        role: publicRole.id,
+        action: { $in: requiredActions },
+      },
+      select: ['action'],
+    });
+
+  const existingActions = new Set(existingPermissions.map((permission) => permission.action));
+  const missingActions = requiredActions.filter((action) => !existingActions.has(action));
+
+  for (const action of missingActions) {
+    await strapi.db.query('plugin::users-permissions.permission').create({
+      data: {
+        action,
+        role: publicRole.id,
+      },
+    });
+  }
+
+  if (missingActions.length > 0) {
+    strapi.log.info(`[permissions] Added ${missingActions.length} public permission(s).`);
+  }
+}
+
 export default {
   register() {},
 
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    await ensurePublicPermissions(strapi);
+
     const count = await strapi.documents('api::product.product').count({});
     if (count === 0) {
       await seedData(strapi);
