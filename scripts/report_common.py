@@ -304,7 +304,14 @@ def build_hub_html() -> str:
     </p>
 
     <div class="hub-grid">
-      <a id="card-code" class="hub-card disabled" href="code-analysis.html">
+      <a id="card-live" class="hub-card" href="live.html" style="border-color:#bfdbfe;">
+        <div class="hub-icon">📡</div>
+        <h2>Live Pipeline <span id="live-badge"></span></h2>
+        <p>Watch a run progress stage by stage in real time — no need to open GitHub Actions.</p>
+        <div class="hub-meta" id="meta-live">Open during a run to follow it live.</div>
+      </a>
+
+      <a id="card-code" class="hub-card disabled" href="code-analysis.html">>
         <div class="hub-icon">🔮</div>
         <h2>Code Change Analysis <span id="latest-code"></span></h2>
         <p>Anticipates regression-test gaps from the latest code changes, before running the suite.</p>

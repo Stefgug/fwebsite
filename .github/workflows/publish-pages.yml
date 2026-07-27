@@ -51,6 +51,9 @@ jobs:
             rm -rf "$PUB/.git"
           fi
           cp -a automation-reports/. "$PUB"/
+          # Static pages (e.g. the live progress view) are versioned in the repo
+          # rather than produced by a run, so they refresh on every publish.
+          if [ -d pages ]; then cp -a pages/. "$PUB"/; fi
           cd "$PUB"
           git init -q
           git checkout -q -b reports-store

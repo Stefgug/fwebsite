@@ -131,7 +131,7 @@ Notice each bullet is a **user journey with a verifiable outcome** — that is e
 ### Pre-demo prep (before the call)
 - Run a **Demo reset** (section 7) so Jira is clean.
 - Confirm the **deliberate regression** is in place (section 5, Step 6 note).
-- Open tabs: Jira SCRUM backlog · GitHub Actions (filter `Epic Test Pipeline`) · the live report https://stefgug.github.io/fwebsite/.
+- Open tabs: Jira SCRUM backlog · **the Live Pipeline page https://stefgug.github.io/fwebsite/live.html** · the report https://stefgug.github.io/fwebsite/. (GitHub Actions is optional now — keep it closed unless a developer asks.)
 
 ### Step 1 — Create the Epic live
 In Jira SCRUM, click **Create → Epic**. Title it **"Secure User Authentication & Checkout Access"** and paste the acceptance-criteria description from section 4. Click **Create**.
@@ -147,8 +147,14 @@ Both creators are **deduped** — re-triggering the same Epic won't create dupli
 
 > "Every test maps to a named business area and a real file — full traceability from Epic acceptance criteria all the way to the test code."
 
-### Step 3 — Pipeline runs
-In GitHub Actions, open the running **Epic Test Pipeline**. Narrate the steps: create tickets → create test-area stories → unit tests (Vitest + coverage) → Playwright E2E → AI triage + report → publish to Pages.
+### Step 3 — Watch it run on the Live Pipeline page
+Switch to **https://stefgug.github.io/fwebsite/live.html** (have it open from the start — it detects the new run on its own). Eight QA-facing stages tick green in real time with per-stage timings and a progress bar, so **the audience never sees a build log**. When the run finishes it offers the report and auto-advances after a short countdown.
+
+> "You don't need to understand CI to follow this — you can see exactly what the machine is doing on your behalf."
+
+**Rate limit:** anonymous browsers share **60 API requests/hour per network**, which covers roughly one run. Click the chip in the top-right and paste a **classic token with no scopes ticked** to get 5,000/hour. The repo is public, so a scopeless token grants nothing beyond what is already public, and it is stored only in your browser — never in the repo.
+
+*(GitHub Actions is still there if a developer in the room asks to see the raw logs.)*
 
 ### Step 4 — Open the Dashboard
 Open https://stefgug.github.io/fwebsite/ and walk through:
@@ -235,6 +241,8 @@ Also re-check the deliberate regression in `frontend/app/cart/page.tsx` (section
 | Workflow doesn't trigger after Epic creation | Automation rule disabled or PAT expired | Verify the rule in Jira → Project settings → Automation; regenerate the GitHub PAT (`repo` + `actions:write`). |
 | Playwright reports **0 tests** | Dev server / mock backend not ready, or wrong base URL | Confirm the app started before tests; check `NEXT_PUBLIC_STRAPI_URL` and the Playwright `webServer` config. |
 | Report URL shows **404** | Pages deploy not finished or cached | Wait 1–2 min for the deploy-pages job; hard-refresh (Ctrl+Shift+R). |
+| **Live page shows "rate limit reached"** | The 60 anonymous API requests/hour are shared across your whole network | Click the chip top-right and paste a classic token with **no scopes ticked** (section 5, Step 3). |
+| **Live page stuck on "Waiting for a pipeline run"** | No run started yet, or `live.html` predates the last Pages deploy | Confirm the Epic dispatch fired; the page picks up a new run within ~20s by itself. |
 | No Jira **Bug** created | Project has no "Bug" issue type | Expected — the pipeline **falls back to "Task"** automatically. |
 | AI sections look generic / no proposals | `ANTHROPIC_API_KEY` missing or rate-limited | Verify the secret. Triage falls back to deterministic mode so the demo still works; proposals/vision need the key. |
 | **"Accept & run" didn't trigger** | Issue missing the `run-proposed-test` label | Confirm the label exists in the repo and is applied to the issue (section 3.3). |
