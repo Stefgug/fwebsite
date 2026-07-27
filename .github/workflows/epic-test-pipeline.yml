@@ -139,6 +139,7 @@ jobs:
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
           path: published/
 
   deploy-pages:
@@ -160,6 +161,8 @@ jobs:
         id: deploy_1
         continue-on-error: true
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Cooldown before retry
         if: steps.deploy_1.outcome == 'failure'
@@ -170,6 +173,8 @@ jobs:
         if: steps.deploy_1.outcome == 'failure'
         continue-on-error: true
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Cooldown before final attempt
         if: steps.deploy_1.outcome == 'failure' && steps.deploy_2.outcome == 'failure'
@@ -178,3 +183,5 @@ jobs:
       - name: Deploy to GitHub Pages (final attempt)
         if: steps.deploy_1.outcome == 'failure' && steps.deploy_2.outcome == 'failure'
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
