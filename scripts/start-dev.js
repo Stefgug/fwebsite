@@ -1,32 +1,68 @@
 const fs = require("node:fs");
+const net = require("node:net");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
 const rootDir = path.resolve(__dirname, "..");
+const npmExecPath = process.env.npm_execpath;
+const preferredBackendPort = Number(process.env.PORT || 1338);
+
+if (!npmExecPath) {
+  throw new Error("npm_execpath is not available. Please run this script via `npm run dev`.");
+}
+
+function isPortAvailable(port) {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once("error", () => resolve(false));
+    server.once("listening", () => {
+      server.close(() => resolve(true));
+    });
+    server.listen(port, "127.0.0.1");
+  });
+}
+
+async function pickBackendPort(startPort) {
+  for (let port = startPort; port < startPort + 20; port += 1) {
+    if (await isPortAvailable(port)) {
+      return port;
+    }
+  }
+  throw new Error(`No available backend port found in range ${startPort}-${startPort + 19}.`);
+}
 const services = [
   {
     name: "backend",
     cwd: path.join(rootDir, "backend"),
     script: "develop",
     marker: path.join("node_modules", "@strapi", "strapi", "package.json"),
+    env: {},
   },
   {
     name: "frontend",
     cwd: path.join(rootDir, "frontend"),
     script: "dev",
     marker: path.join("node_modules", "next", "package.json"),
+    env: {},
   },
 ];
 
-function runCommand(command, cwd) {
+function runNpmCommand(args, cwd, extraEnv) {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, { cwd, stdio: "inherit", shell: true });
+    const child = spawn(process.execPath, [npmExecPath, ...args], {
+      cwd,
+      stdio: "inherit",
+      env: {
+        ...process.env,
+        ...extraEnv,
+      },
+    });
     child.on("exit", (code) => {
       if (code === 0) {
         resolve();
         return;
       }
-      reject(new Error(`${command} failed with code ${code}`));
+      reject(new Error(`npm ${args.join(" ")} failed with code ${code}`));
     });
     child.on("error", reject);
   });
@@ -40,18 +76,33 @@ async function ensureDependencies() {
     }
 
     console.log(`[setup] Installing ${service.name} dependencies...`);
-    await runCommand("npm install", service.cwd);
+    await runNpmCommand(["install"], service.cwd);
   }
 }
 
-function startServices() {
-  const children = services.map((service) =>
-    spawn(`npm run ${service.script}`, {
+function startServices(backendPort) {
+  const strapiUrl = process.env.NEXT_PUBLIC_STRAPI_URL || `http://localhost:${backendPort}`;
+
+  const runtimeServices = services.map((service) => ({
+    ...service,
+    env:
+      service.name === "backend"
+        ? { ...service.env, PORT: String(backendPort) }
+        : { ...service.env, NEXT_PUBLIC_STRAPI_URL: strapiUrl },
+  }));
+
+  const children = runtimeServices.map((service) =>
+    spawn(process.execPath, [npmExecPath, "run", service.script], {
       cwd: service.cwd,
       stdio: "inherit",
-      shell: true,
+      env: {
+        ...process.env,
+        ...service.env,
+      },
     })
   );
+
+  console.log(`[dev] Backend admin: ${strapiUrl}/admin`);
 
   let shuttingDown = false;
 
@@ -94,6 +145,7 @@ function startServices() {
 }
 
 ensureDependencies()
+  .then(() => pickBackendPort(preferredBackendPort))
   .then(startServices)
   .catch((error) => {
     console.error(error.message);

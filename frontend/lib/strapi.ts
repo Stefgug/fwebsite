@@ -13,7 +13,7 @@ import type {
   StrapiUser,
 } from '@/types';
 
-const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL!;
+const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? process.env.STRAPI_URL ?? 'http://localhost:1338';
 const API_TOKEN = process.env.STRAPI_API_TOKEN;
 
 async function strapiFetch<T>(
