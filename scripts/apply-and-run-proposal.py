@@ -133,7 +133,14 @@ def run_test(target: str, test_name: str) -> tuple[bool, str]:
     pattern = re.escape(test_name)
     spec_rel = target[len("frontend/"):]  # tests/xxx.spec.ts
     cmd = ["npx", "playwright", "test", spec_rel, "-g", pattern]
-    env = {**os.environ, "CI": "true", "NEXT_PUBLIC_STRAPI_URL": "http://localhost:1999"}
+    # Single-test validation: skip the production build and use the dev server
+    # so the demo's "Accept & run this test" round-trip stays under a minute.
+    env = {
+        **os.environ,
+        "CI": "true",
+        "PLAYWRIGHT_FAST_SERVER": "1",
+        "NEXT_PUBLIC_STRAPI_URL": "http://localhost:1999",
+    }
     try:
         proc = subprocess.run(
             cmd, cwd=str(FRONTEND), capture_output=True, text=True, env=env, timeout=600

@@ -1,13 +1,17 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env.CI;
+// The "Accept & run this test" demo path validates a single new test, so it opts
+// out of the production build (~90s) and runs against the dev server instead.
+const fastServer = !!process.env.PLAYWRIGHT_FAST_SERVER;
+const useProdServer = isCI && !fastServer;
 const frontendPort = Number(process.env.PLAYWRIGHT_FRONTEND_PORT ?? 3000);
 const mockStrapiPort = Number(process.env.MOCK_STRAPI_PORT ?? 1999);
 
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.ts',
-  timeout: 30_000,
+  timeout: fastServer ? 60_000 : 30_000,
   retries: isCI ? 1 : 0,
   workers: isCI ? 1 : undefined,
   reporter: isCI
@@ -35,12 +39,12 @@ export default defineConfig({
     },
     {
       // In CI: pre-compile all routes (eliminates lazy-compile race conditions)
-      // Locally: dev mode for fast iteration
-      command: isCI
+      // Locally, and for single-test proposal runs: dev mode for fast feedback
+      command: useProdServer
         ? `npm run build && npm start -- -p ${frontendPort}`
         : `npm run dev -- -p ${frontendPort}`,
       port: frontendPort,
-      timeout: isCI ? 180_000 : 60_000,
+      timeout: useProdServer ? 180_000 : 90_000,
       reuseExistingServer: !isCI,
       env: {
         NEXT_PUBLIC_STRAPI_URL: `http://localhost:${mockStrapiPort}`,

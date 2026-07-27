@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shutil
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -469,6 +470,8 @@ def build_visual_evidence(failures: list[dict], triage: dict | None = None) -> d
         for ft in triage.get("failing_tests", []):
             impact_by_test[ft.get("test_name", "")] = ft.get("functional_impact", "")
     shots_dir = REPORTS_DIR / "screenshots"
+
+    jobs: list[tuple[Path, str, str]] = []
     for f in failures:
         shot = f.get("screenshot") or ""
         if not shot:
@@ -476,10 +479,19 @@ def build_visual_evidence(failures: list[dict], triage: dict | None = None) -> d
         src = Path(shot)
         if not src.exists():
             continue
-        shots_dir.mkdir(parents=True, exist_ok=True)
         test_name = f.get("test", "test")
-        impact = impact_by_test.get(test_name) or f.get("error", "")
-        bbox, label = _vision_bbox(src, test_name, impact)
+        jobs.append((src, test_name, impact_by_test.get(test_name) or f.get("error", "")))
+
+    if not jobs:
+        return evidence
+
+    shots_dir.mkdir(parents=True, exist_ok=True)
+    # Each vision call is an independent network round-trip, so this step should
+    # cost as much as the slowest screenshot rather than the sum of all of them.
+    with ThreadPoolExecutor(max_workers=min(4, len(jobs))) as pool:
+        boxes = list(pool.map(lambda job: _vision_bbox(*job), jobs))
+
+    for (src, test_name, _impact), (bbox, label) in zip(jobs, boxes):
         dst = shots_dir / f"{_safe_name(test_name)}.png"
         if _annotate_bbox(src, dst, bbox, label):
             evidence[test_name] = {"image": f"screenshots/{dst.name}", "label": label}
@@ -489,7 +501,7 @@ def build_visual_evidence(failures: list[dict], triage: dict | None = None) -> d
 
 # --------- Dashboard HTML ---------
 
-def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evidence: dict | None = None) -> str:
+def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evidence: dict | None = None, jira_bug_links: dict | None = None, proposals: list | None = None) -> str:
     cov = summary["coverage"]
     pw = summary["playwright"]
 
@@ -600,6 +612,25 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
     else:
         visual_section = ""
 
+    # ── "What the AI just did" impact strip ────────────────────────────
+    # Every number here is a real artefact this run produced without a human.
+    impact_stats = [
+        (e2e_total, "End-to-end<br/>tests executed"),
+        (len(failing_tests), "Failures triaged<br/>with user impact"),
+        (len(jira_bug_links or {}), "Jira bugs<br/>filed automatically"),
+        (len(visual_evidence or {}), "Screenshots<br/>auto-annotated"),
+        (len(proposals or []), "New tests<br/>proposed"),
+    ]
+    impact_items = "\n".join(
+        f"""<div class="impact-item reveal" style="animation-delay:{i * 70}ms">
+              <div class="impact-num" data-count="{n}">{n}</div>
+              <div class="impact-lbl">{lbl}</div>
+            </div>"""
+        for i, (n, lbl) in enumerate(impact_stats)
+    )
+    impact_section = f"""<div class="impact-head">Done automatically for you on this run</div>
+    <div class="impact-strip">{impact_items}</div>"""
+
     # ── Gate summary banner ────────────────────────────────────────────
     if all_pass:
         banner_icon  = "✓"
@@ -654,6 +685,32 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
     .header-nav a:hover {{ background: #374151; color: #f9fafb; }}
     /* ── Layout ── */
     .container {{ max-width: 1080px; margin: 0 auto; padding: 28px 20px 48px; }}
+    /* ── "Done for you" impact strip ── */
+    .impact-head {{
+      font-size: 12px; font-weight: 600; color: #6b7280;
+      text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px;
+    }}
+    .impact-strip {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+      gap: 12px;
+      margin-bottom: 26px;
+    }}
+    .impact-item {{
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+      padding: 16px 18px;
+    }}
+    .impact-num {{
+      font-size: 30px; font-weight: 700; color: #111827; line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }}
+    .impact-lbl {{ font-size: 12px; color: #6b7280; margin-top: 6px; font-weight: 500; line-height: 1.4; }}
+    /* ── Entrance animation (the report should feel like it lands) ── */
+    @keyframes rise {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: none; }} }}
+    .reveal {{ opacity: 0; animation: rise .45s cubic-bezier(.16,.84,.44,1) forwards; }}
+    @media (prefers-reduced-motion: reduce) {{
+      .reveal {{ opacity: 1; animation: none; }}
+    }}
     /* ── Summary banner ── */
     .summary-banner {{
       background: {banner_bg};
@@ -862,6 +919,21 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
       document.removeEventListener('keydown', _lbKey);
     }}
     function _lbKey(e) {{ if (e.key === 'Escape') closeLightbox(); }}
+
+    // Count the headline numbers up so the report reads as a live result.
+    window.addEventListener('DOMContentLoaded', function () {{
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelectorAll('[data-count]').forEach(function (el) {{
+        var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+        if (reduce || target === 0) {{ el.textContent = target; return; }}
+        var start = performance.now(), dur = 700;
+        (function step(now) {{
+          var p = Math.min((now - start) / dur, 1);
+          el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+          if (p < 1) requestAnimationFrame(step);
+        }})(start);
+      }});
+    }});
   </script>
   <header class="header">
     <div class="header-left">
@@ -876,10 +948,12 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
 
   <div class="container">
 
-    <div class="summary-banner">
+    <div class="summary-banner reveal">
       <div class="banner-icon">{banner_icon}</div>
       <p>{html.escape(triage.get('summary', 'No summary available.'))}</p>
     </div>
+
+    {impact_section}
 
     <div class="cards-grid">
       {unit_card}
@@ -905,7 +979,7 @@ def dashboard_html(summary: dict[str, Any], triage: dict[str, Any], visual_evide
 
 # --------- Report writing ---------
 
-def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_links: dict | None = None, proposals: list | None = None) -> tuple[Path, Path, Path]:
+def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_links: dict | None = None, proposals: list | None = None, visual_evidence: dict | None = None) -> tuple[Path, Path, Path]:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     summary_path = REPORTS_DIR / "workflow-summary.json"
     report_path = REPORTS_DIR / "ai-triage-report.md"
@@ -916,10 +990,11 @@ def write_reports(summary: dict[str, Any], triage: dict[str, Any], jira_bug_link
     summary_path.write_text(json.dumps(full_summary, ensure_ascii=False, indent=2), encoding="utf-8")
 
     pw = summary["playwright"]
-    visual_evidence = build_visual_evidence(pw.get("failures", []), triage)
+    if visual_evidence is None:
+        visual_evidence = build_visual_evidence(pw.get("failures", []), triage)
 
     # The post-run dashboard now lives at test-report.html (index.html is the hub).
-    report_html = dashboard_html(summary, triage, visual_evidence)
+    report_html = dashboard_html(summary, triage, visual_evidence, jira_bug_links, proposals)
     (REPORTS_DIR / "test-report.html").write_text(report_html, encoding="utf-8")
 
     # index.html = the GitHub Pages hub linking to every report.
@@ -1681,9 +1756,21 @@ def main() -> None:
     }
 
     triage = ai_triage(pw, cov)
-    jira_bug_links = create_jira_bugs_for_failing_tests(triage, JIRA_EPIC_KEY)
-    proposals = generate_test_proposals(triage, pw)
-    summary_path, report_path, dash_path = write_reports(summary, triage, jira_bug_links, proposals)
+
+    # Filing Jira bugs, proposing new tests and annotating screenshots are
+    # mutually independent, so overlap them: this step is the longest one in the
+    # pipeline and it now costs the slowest branch instead of the sum.
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        bugs_job = pool.submit(create_jira_bugs_for_failing_tests, triage, JIRA_EPIC_KEY)
+        proposals_job = pool.submit(generate_test_proposals, triage, pw)
+        evidence_job = pool.submit(build_visual_evidence, pw.get("failures", []), triage)
+        jira_bug_links = bugs_job.result()
+        proposals = proposals_job.result()
+        visual_evidence = evidence_job.result()
+
+    summary_path, report_path, dash_path = write_reports(
+        summary, triage, jira_bug_links, proposals, visual_evidence
+    )
 
     pages_url = "https://stefgug.github.io/fwebsite/"
     jira_commented = post_jira_epic_comment(summary, pages_url)

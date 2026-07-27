@@ -154,8 +154,11 @@ In GitHub Actions, open the running **Epic Test Pipeline**. Narrate the steps: c
 Open https://stefgug.github.io/fwebsite/ and walk through:
 - **Header** — the Epic key is **hyperlinked straight to Jira**.
 - **AI summary banner** — overall test health in plain English.
+- **"Done automatically for you on this run"** strip — five animated counters (tests executed, failures triaged, Jira bugs filed, screenshots annotated, new tests proposed). Every number is a real artefact produced with **zero manual steps**.
 - **Unit + E2E status cards** — the **E2E badge reflects real pass/fail counts**, not just the CI step outcome.
 - **"Failing Tests — Functional Impact"** table — for each failure: the test name, a **plain-English functional impact**, and a **recommended QA action**. No stack traces, no code.
+
+> "Read the counters out loud — that's a morning of manual triage that already happened while you were reading the Epic."
 
 > "This tells you **what the customer can't do** and **what you should do about it** — in plain English, without needing to read a stack trace."
 
@@ -190,7 +193,7 @@ Every proposal is **dedup-checked** against the whole suite: Claude is given all
 ### Step 9 — Accept & run a proposal
 Click **"Accept & run this test."** It opens a **pre-filled GitHub Issue** (already carrying the `run-proposed-test` label) whose body embeds the proposal as JSON. The `run-proposed-test.yml` workflow triggers on that label, applies the change to a **throwaway checkout**, runs **only that test**, and comments the **PASS/FAIL** result back on the issue — including the test code and Playwright output. **Nothing is committed automatically;** if it passes, the tester opens a PR to keep it.
 
-> **Timing note:** this run does a full Next.js build first (~2–3 minutes). **Trigger it a few minutes before** you want to show the result, then cut back to it.
+> **Timing note:** the proposal run validates a single test against the dev server (no production build), so the PASS/FAIL comment typically lands in **under a minute** — you can click it live and stay on the issue.
 
 ### Step 10 — The Epic comment
 Back in Jira, the Epic now has a **comment with the report URL** — the permanent home of the report on GitHub Pages.
@@ -235,5 +238,5 @@ Also re-check the deliberate regression in `frontend/app/cart/page.tsx` (section
 | No Jira **Bug** created | Project has no "Bug" issue type | Expected — the pipeline **falls back to "Task"** automatically. |
 | AI sections look generic / no proposals | `ANTHROPIC_API_KEY` missing or rate-limited | Verify the secret. Triage falls back to deterministic mode so the demo still works; proposals/vision need the key. |
 | **"Accept & run" didn't trigger** | Issue missing the `run-proposed-test` label | Confirm the label exists in the repo and is applied to the issue (section 3.3). |
-| Proposal result slow to appear | The run does a full Next.js build (~2–3 min) | Trigger it a few minutes ahead and return to it (section 5, Step 9). |
+| Proposal result slow to appear | Cold Playwright browser cache on the runner | First run after a Playwright version bump re-downloads Chromium; subsequent runs are cached and land in under a minute. |
 | Stories created but no parent link | Hierarchy issue in the project | Ensure tickets are created as children of the Epic; re-check the Epic key passed in the dispatch payload. |
