@@ -6,6 +6,7 @@ const { spawn } = require("node:child_process");
 const rootDir = path.resolve(__dirname, "..");
 const npmExecPath = process.env.npm_execpath;
 const preferredBackendPort = Number(process.env.PORT || 1338);
+const preferredFrontendPort = Number(process.env.FRONTEND_PORT || 3000);
 
 if (!npmExecPath) {
   throw new Error("npm_execpath is not available. Please run this script via `npm run dev`.");
@@ -18,32 +19,33 @@ function isPortAvailable(port) {
     server.once("listening", () => {
       server.close(() => resolve(true));
     });
-    server.listen(port, "127.0.0.1");
+    // Bind on all interfaces so a port already taken on IPv6 (or on another
+    // local interface) is correctly reported as unavailable.
+    server.listen(port);
   });
 }
 
-async function pickBackendPort(startPort) {
+async function pickPort(startPort, label) {
   for (let port = startPort; port < startPort + 20; port += 1) {
     if (await isPortAvailable(port)) {
       return port;
     }
   }
-  throw new Error(`No available backend port found in range ${startPort}-${startPort + 19}.`);
+  throw new Error(`No available ${label} port found in range ${startPort}-${startPort + 19}.`);
 }
+
 const services = [
   {
     name: "backend",
     cwd: path.join(rootDir, "backend"),
     script: "develop",
     marker: path.join("node_modules", "@strapi", "strapi", "package.json"),
-    env: {},
   },
   {
     name: "frontend",
     cwd: path.join(rootDir, "frontend"),
     script: "dev",
     marker: path.join("node_modules", "next", "package.json"),
-    env: {},
   },
 ];
 
@@ -80,19 +82,21 @@ async function ensureDependencies() {
   }
 }
 
-function startServices(backendPort) {
+function startServices({ backendPort, frontendPort }) {
   const strapiUrl = process.env.NEXT_PUBLIC_STRAPI_URL || `http://localhost:${backendPort}`;
 
-  const runtimeServices = services.map((service) => ({
-    ...service,
-    env:
-      service.name === "backend"
-        ? { ...service.env, PORT: String(backendPort) }
-        : { ...service.env, NEXT_PUBLIC_STRAPI_URL: strapiUrl },
-  }));
+  const runtimeServices = services.map((service) =>
+    service.name === "backend"
+      ? { ...service, args: ["run", service.script], env: { PORT: String(backendPort) } }
+      : {
+          ...service,
+          args: ["run", service.script, "--", "-p", String(frontendPort)],
+          env: { NEXT_PUBLIC_STRAPI_URL: strapiUrl },
+        }
+  );
 
   const children = runtimeServices.map((service) =>
-    spawn(process.execPath, [npmExecPath, "run", service.script], {
+    spawn(process.execPath, [npmExecPath, ...service.args], {
       cwd: service.cwd,
       stdio: "inherit",
       env: {
@@ -102,9 +106,30 @@ function startServices(backendPort) {
     })
   );
 
-  console.log(`[dev] Backend admin: ${strapiUrl}/admin`);
+  console.log("");
+  console.log(`[dev] Site        : http://localhost:${frontendPort}`);
+  console.log(`[dev] Strapi API  : ${strapiUrl}`);
+  console.log(`[dev] Strapi admin: ${strapiUrl}/admin`);
+  console.log("");
 
   let shuttingDown = false;
+
+  const killTree = (child) => {
+    if (child.killed || child.exitCode !== null || !child.pid) {
+      return;
+    }
+
+    if (process.platform === "win32") {
+      // child.kill() only terminates the npm wrapper, leaving the actual
+      // Strapi/Next process alive and holding its port. Kill the whole tree.
+      spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+        stdio: "ignore",
+      });
+      return;
+    }
+
+    child.kill("SIGINT");
+  };
 
   const stopAll = () => {
     if (shuttingDown) {
@@ -112,9 +137,7 @@ function startServices(backendPort) {
     }
     shuttingDown = true;
     for (const child of children) {
-      if (!child.killed) {
-        child.kill("SIGINT");
-      }
+      killTree(child);
     }
   };
 
@@ -145,7 +168,10 @@ function startServices(backendPort) {
 }
 
 ensureDependencies()
-  .then(() => pickBackendPort(preferredBackendPort))
+  .then(async () => ({
+    backendPort: await pickPort(preferredBackendPort, "backend"),
+    frontendPort: await pickPort(preferredFrontendPort, "frontend"),
+  }))
   .then(startServices)
   .catch((error) => {
     console.error(error.message);

@@ -1,0 +1,99 @@
+name: "Publish reports to GitHub Pages"
+
+# Reusable workflow shared by every pipeline that publishes an automation
+# report. Keeps the "assemble + upload + retry deploy" logic in one place so a
+# fix only has to be made once.
+on:
+  workflow_call:
+    inputs:
+      commit_message:
+        description: "Commit message used for the reports-store branch"
+        required: true
+        type: string
+      artifact_name:
+        description: "Unique name for the Pages artifact of this run"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    name: Assemble and deploy Pages
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+    env:
+      PAGES_ARTIFACT_NAME: ${{ inputs.artifact_name != '' && inputs.artifact_name || format('github-pages-{0}-{1}', github.run_id, github.run_attempt) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download report artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: test-dashboard
+          path: automation-reports/
+
+      - name: Assemble Pages site (preserve the other report)
+        run: |
+          set -e
+          PUB=published
+          REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          rm -rf "$PUB" && mkdir -p "$PUB"
+          if git ls-remote --exit-code --heads "$REPO_URL" reports-store >/dev/null 2>&1; then
+            git clone --depth 1 --branch reports-store "$REPO_URL" "$PUB"
+            rm -rf "$PUB/.git"
+          fi
+          cp -a automation-reports/. "$PUB"/
+          cd "$PUB"
+          git init -q
+          git checkout -q -b reports-store
+          git add -A
+          git -c user.email="actions@github.com" -c user.name="github-actions" \
+            commit -qm "${{ inputs.commit_message }}" || echo "nothing to commit"
+          git push -f "$REPO_URL" reports-store
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: ${{ env.PAGES_ARTIFACT_NAME }}
+          path: published/
+
+      # actions/deploy-pages makes a single createPagesDeployment call with no
+      # retry; a transient backend 401 fails the whole job. We retry up to 3
+      # times (the manual re-run that fixes it, automated) so the demo never
+      # stalls on a flaky deployment.
+      - name: Deploy to GitHub Pages (attempt 1)
+        id: deploy_1
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}
+
+      - name: Cooldown before retry
+        if: steps.deploy_1.outcome == 'failure'
+        run: sleep 20
+
+      - name: Deploy to GitHub Pages (attempt 2)
+        id: deploy_2
+        if: steps.deploy_1.outcome == 'failure'
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}
+
+      - name: Cooldown before final attempt
+        if: steps.deploy_1.outcome == 'failure' && steps.deploy_2.outcome == 'failure'
+        run: sleep 30
+
+      - name: Deploy to GitHub Pages (final attempt)
+        if: steps.deploy_1.outcome == 'failure' && steps.deploy_2.outcome == 'failure'
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}

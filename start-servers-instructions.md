@@ -4,5 +4,5 @@ npm run dev
 # Vérifier le backend seul
 npm --prefix backend run build
 
-# Admin Strapi local
-http://localhost:1338/admin
+# Les URLs (site + admin Strapi) sont affichées au démarrage.
+# Voir README.md pour le détail.

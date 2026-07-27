@@ -1,6 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const isCI = !!process.env.CI;
+const frontendPort = Number(process.env.PLAYWRIGHT_FRONTEND_PORT ?? 3000);
+const mockStrapiPort = Number(process.env.MOCK_STRAPI_PORT ?? 1999);
 
 export default defineConfig({
   testDir: './tests',
@@ -13,7 +15,7 @@ export default defineConfig({
     : [['html', { open: 'on-failure' }], ['list']],
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: `http://localhost:${frontendPort}`,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -24,22 +26,24 @@ export default defineConfig({
 
   webServer: [
     {
-      // Mock Strapi on port 1999 (avoids conflict with real Strapi on 1338)
+      // Mock Strapi (avoids conflict with the real Strapi dev server)
       command: 'node ../scripts/mock-strapi.js',
-      port: 1999,
+      port: mockStrapiPort,
       timeout: 10_000,
       reuseExistingServer: !isCI,
-      env: { MOCK_STRAPI_PORT: '1999' },
+      env: { MOCK_STRAPI_PORT: String(mockStrapiPort) },
     },
     {
       // In CI: pre-compile all routes (eliminates lazy-compile race conditions)
       // Locally: dev mode for fast iteration
-      command: isCI ? 'npm run build && npm start' : 'npm run dev',
-      port: 3000,
+      command: isCI
+        ? `npm run build && npm start -- -p ${frontendPort}`
+        : `npm run dev -- -p ${frontendPort}`,
+      port: frontendPort,
       timeout: isCI ? 180_000 : 60_000,
       reuseExistingServer: !isCI,
       env: {
-        NEXT_PUBLIC_STRAPI_URL: 'http://localhost:1999',
+        NEXT_PUBLIC_STRAPI_URL: `http://localhost:${mockStrapiPort}`,
         STRAPI_API_TOKEN: 'mock-token',
       },
     },
