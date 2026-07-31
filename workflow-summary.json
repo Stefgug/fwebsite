@@ -1,0 +1,65 @@
+{
+  "epic": {
+    "key": "SCRUM-385",
+    "title": "Secure User Authentication & Checkout Access",
+    "description": "As a ShopGeneric customer, I need to clearly identify whether I am logged in or out at all times, access my cart and proceed to checkout without friction, and have my session persist correctly across pages. This Epic covers: the login/signup link visibility in the navigation bar for unauthenticated users, the checkout button accessibility from the cart page when items are present, session state persistence after login, and the smooth transition from guest browsing to authenticated checkout. Acceptance criteria: the login link is always visible to logged-out users in the navbar, a non-empty cart always displays a clearly labelled checkout button, and logged-in users see their account status reflected immediately in the navigation."
+  },
+  "git": {
+    "sha": "34ba41537ab79e27452364ee21f8cd4ce2c98764",
+    "run_id": "30627489995"
+  },
+  "unit_outcome": "success",
+  "e2e_outcome": "success",
+  "playwright": {
+    "total": 49,
+    "passed": 48,
+    "failed": 1,
+    "skipped": 0,
+    "failures": [
+      {
+        "file": "cart.spec.ts",
+        "test": "cart has a Checkout button when not empty",
+        "error": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('a[href=\"/checkout\"]')\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('a[href=\"/checkout\"]')\u001b[22m\n",
+        "screenshot": "/home/runner/work/fwebsite/fwebsite/frontend/test-results/cart-Checkout-cart-has-a-Checkout-button-when-not-empty-chromium-retry1/test-failed-1.png"
+      }
+    ]
+  },
+  "coverage": {
+    "lines_pct": 59.02,
+    "functions_pct": 71.42,
+    "branches_pct": 82.45,
+    "statements_pct": 59.02,
+    "low_files": [
+      {
+        "file": "/home/runner/work/fwebsite/fwebsite/frontend/lib/auth.ts",
+        "lines_pct": 0.0,
+        "functions_pct": 0.0,
+        "branches_pct": 0.0
+      },
+      {
+        "file": "/home/runner/work/fwebsite/fwebsite/frontend/lib/strapi.ts",
+        "lines_pct": 42.1,
+        "functions_pct": 35.71,
+        "branches_pct": 46.15
+      }
+    ]
+  },
+  "workflow_ok": true,
+  "ai_triage": {
+    "summary": "48 out of 49 automated tests passed, but one important checkout-related test is failing, meaning a key part of the shopping experience is currently broken. The overall code coverage is moderate at 59%, with some critical areas — particularly the authentication library — having no test coverage at all. While most of the product is working as expected, the checkout button issue and coverage gaps represent real risks to customers trying to complete a purchase.",
+    "failing_tests": [
+      {
+        "test_name": "cart has a Checkout button when not empty",
+        "functional_impact": "When a customer adds items to their cart and tries to proceed to checkout, the checkout button is missing from the page, leaving them with no way to complete their purchase.",
+        "qa_action": "Manually add one or more products to the cart as both a guest and a logged-in user, then verify whether a clearly labelled checkout button appears on the cart page in Chrome."
+      }
+    ],
+    "blind_spots": [
+      "Manually verify that the login and sign-up links are always visible in the navigation bar when a customer is not logged in, across all main pages of the site.",
+      "Manually verify that after a customer logs in, their account name or status is immediately reflected in the navigation bar without needing to refresh the page.",
+      "Manually verify that a customer's session remains active as they move between different pages (such as the homepage, product pages, and cart) after logging in.",
+      "Manually verify the full journey from browsing as a guest, adding items to the cart, logging in, and then successfully reaching the checkout page with cart contents intact.",
+      "Manually verify that password-related authentication flows — such as login with wrong credentials, account lockout, or password reset — behave correctly, given that the authentication library has no automated test coverage at all."
+    ]
+  }
+}

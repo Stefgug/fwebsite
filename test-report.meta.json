@@ -1,0 +1,12 @@
+{
+  "type": "test-report",
+  "title": "Post-Run Test Report",
+  "href": "test-report.html",
+  "generated_at": "2026-07-31 11:37 UTC",
+  "generated_ts": 1785497865,
+  "epic_key": "SCRUM-385",
+  "epic_title": "Secure User Authentication & Checkout Access",
+  "gate": "fail",
+  "e2e": "48/49",
+  "coverage": 59.0
+}

@@ -1,0 +1,88 @@
+{
+  "branch": "demo/break-login-link",
+  "commit": "3f2ecacefb669968ca4654b1a796129ed4536338",
+  "epic_key": "SCRUM-385",
+  "files": [
+    {
+      "status": "M",
+      "path": "frontend/components/layout/Navbar.tsx"
+    }
+  ],
+  "analysis": {
+    "summary": "The navbar login link label was renamed from 'Login' to 'Sign In' in both the desktop and mobile menus. This is a purely cosmetic text change with no routing or authentication logic affected. One existing navigation test that asserts the exact text 'Login' will now fail and must be updated to match the new label.",
+    "change_impacts": [
+      {
+        "file": "frontend/components/layout/Navbar.tsx",
+        "change": "The desktop navigation login link text changed from 'Login' to 'Sign In'",
+        "risk": "medium",
+        "tested": true
+      },
+      {
+        "file": "frontend/components/layout/Navbar.tsx",
+        "change": "The mobile navigation login link text changed from 'Login' to 'Sign In'",
+        "risk": "medium",
+        "tested": false
+      }
+    ],
+    "proposals": [
+      {
+        "kind": "modify_test",
+        "trigger": "code_change",
+        "title": "Update navbar login link assertion from 'Login' to 'Sign In'",
+        "rationale": "The existing test explicitly matches the exact text 'Login', which no longer exists in the DOM. Updating it to match 'Sign In' keeps the navigation regression suite green and correctly reflects the new label without hiding any real defect.",
+        "coverage_check": "navigation.spec.ts 'login link is visible when not logged in' directly asserts getByRole('link', { name: /^Login$/i }) which will now fail. No other test in auth.spec.ts, home.spec.ts, products.spec.ts, cart.spec.ts, or about.spec.ts covers this navbar link text. This is purely a label rename with no behaviour change, so modifying the test is safe.",
+        "target_file": "frontend/tests/navigation.spec.ts",
+        "test_name": "login link is visible when not logged in",
+        "existing_code": "  test('login link is visible when not logged in', async ({ page }) => {\n    // Navbar shows \"Login\" (not \"Sign In\") when user is not authenticated\n    const loginLink = page.getByRole('link', { name: /^Login$/i });\n    await expect(loginLink).toBeVisible();\n  });",
+        "proposed_code": "  test('login link is visible when not logged in', async ({ page }) => {\n    // Navbar now shows \"Sign In\" (renamed from \"Login\") when user is not authenticated\n    const loginLink = page.getByRole('link', { name: /^Sign In$/i }).first();\n    await expect(loginLink).toBeVisible();\n    await expect(loginLink).toHaveAttribute('href', '/login');\n  });",
+        "id": "chg-1",
+        "jira_epic_key": "SCRUM-385",
+        "source": "code-change"
+      },
+      {
+        "kind": "new_test",
+        "trigger": "code_change",
+        "title": "Mobile menu shows 'Sign In' link that navigates to /login",
+        "rationale": "The mobile menu login link was also renamed but is not covered by any existing test, leaving a gap in mobile navigation regression. Verifying it renders with the correct label and routes to /login protects against future regressions on the mobile path.",
+        "coverage_check": "Checked all tests in navigation.spec.ts, auth.spec.ts, home.spec.ts, products.spec.ts, cart.spec.ts, and about.spec.ts. None interact with the mobile hamburger menu or assert the mobile login link. This is not a duplicate.",
+        "target_file": "frontend/tests/navigation.spec.ts",
+        "test_name": "mobile menu shows Sign In link that navigates to login page",
+        "existing_code": "",
+        "proposed_code": "import { test, expect } from '@playwright/test';\n\ntest.describe('Navigation — mobile menu', () => {\n  test('mobile menu shows Sign In link that navigates to login page', async ({ page }) => {\n    // Use a narrow viewport to trigger the mobile menu\n    await page.setViewportSize({ width: 375, height: 812 });\n    await page.goto('/');\n\n    // Open the mobile menu via the hamburger button\n    const hamburger = page.locator('button[aria-label*=\"menu\" i], button[aria-label*=\"open\" i], header button').filter({ hasNot: page.locator('a') }).first();\n    await hamburger.click();\n\n    // The mobile Sign In link should be visible and point to /login\n    const mobileSignIn = page.getByRole('link', { name: /^Sign In$/i });\n    await expect(mobileSignIn).toBeVisible({ timeout: 5_000 });\n    await expect(mobileSignIn).toHaveAttribute('href', '/login');\n\n    // Clicking it should navigate to the login page\n    await mobileSignIn.click();\n    await expect(page).toHaveURL('/login');\n  });\n});",
+        "id": "chg-2",
+        "jira_epic_key": "SCRUM-385",
+        "source": "code-change"
+      }
+    ]
+  },
+  "proposals": [
+    {
+      "kind": "modify_test",
+      "trigger": "code_change",
+      "title": "Update navbar login link assertion from 'Login' to 'Sign In'",
+      "rationale": "The existing test explicitly matches the exact text 'Login', which no longer exists in the DOM. Updating it to match 'Sign In' keeps the navigation regression suite green and correctly reflects the new label without hiding any real defect.",
+      "coverage_check": "navigation.spec.ts 'login link is visible when not logged in' directly asserts getByRole('link', { name: /^Login$/i }) which will now fail. No other test in auth.spec.ts, home.spec.ts, products.spec.ts, cart.spec.ts, or about.spec.ts covers this navbar link text. This is purely a label rename with no behaviour change, so modifying the test is safe.",
+      "target_file": "frontend/tests/navigation.spec.ts",
+      "test_name": "login link is visible when not logged in",
+      "existing_code": "  test('login link is visible when not logged in', async ({ page }) => {\n    // Navbar shows \"Login\" (not \"Sign In\") when user is not authenticated\n    const loginLink = page.getByRole('link', { name: /^Login$/i });\n    await expect(loginLink).toBeVisible();\n  });",
+      "proposed_code": "  test('login link is visible when not logged in', async ({ page }) => {\n    // Navbar now shows \"Sign In\" (renamed from \"Login\") when user is not authenticated\n    const loginLink = page.getByRole('link', { name: /^Sign In$/i }).first();\n    await expect(loginLink).toBeVisible();\n    await expect(loginLink).toHaveAttribute('href', '/login');\n  });",
+      "id": "chg-1",
+      "jira_epic_key": "SCRUM-385",
+      "source": "code-change"
+    },
+    {
+      "kind": "new_test",
+      "trigger": "code_change",
+      "title": "Mobile menu shows 'Sign In' link that navigates to /login",
+      "rationale": "The mobile menu login link was also renamed but is not covered by any existing test, leaving a gap in mobile navigation regression. Verifying it renders with the correct label and routes to /login protects against future regressions on the mobile path.",
+      "coverage_check": "Checked all tests in navigation.spec.ts, auth.spec.ts, home.spec.ts, products.spec.ts, cart.spec.ts, and about.spec.ts. None interact with the mobile hamburger menu or assert the mobile login link. This is not a duplicate.",
+      "target_file": "frontend/tests/navigation.spec.ts",
+      "test_name": "mobile menu shows Sign In link that navigates to login page",
+      "existing_code": "",
+      "proposed_code": "import { test, expect } from '@playwright/test';\n\ntest.describe('Navigation — mobile menu', () => {\n  test('mobile menu shows Sign In link that navigates to login page', async ({ page }) => {\n    // Use a narrow viewport to trigger the mobile menu\n    await page.setViewportSize({ width: 375, height: 812 });\n    await page.goto('/');\n\n    // Open the mobile menu via the hamburger button\n    const hamburger = page.locator('button[aria-label*=\"menu\" i], button[aria-label*=\"open\" i], header button').filter({ hasNot: page.locator('a') }).first();\n    await hamburger.click();\n\n    // The mobile Sign In link should be visible and point to /login\n    const mobileSignIn = page.getByRole('link', { name: /^Sign In$/i });\n    await expect(mobileSignIn).toBeVisible({ timeout: 5_000 });\n    await expect(mobileSignIn).toHaveAttribute('href', '/login');\n\n    // Clicking it should navigate to the login page\n    await mobileSignIn.click();\n    await expect(page).toHaveURL('/login');\n  });\n});",
+      "id": "chg-2",
+      "jira_epic_key": "SCRUM-385",
+      "source": "code-change"
+    }
+  ]
+}
